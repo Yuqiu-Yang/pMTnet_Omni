@@ -61,7 +61,8 @@ PyPI install
    :maxdepth: 1
    :caption: API Reference
 
-   
+   api_reference/index
+
 
 
 Indices and tables
