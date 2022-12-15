@@ -9,9 +9,9 @@ Apart from the working model, for this repo we want to achieve the following:
 
 - [x] Online document (readthedocs.io) (autodoc for api)
 - [ ] Unit tests (code coverage + badges)
-- [ ]Command line interface 
-- [ ]Github workflow 
-- [ ]Publish on conda (conda-forge) and PyPI
+- [ ] Command line interface 
+- [ ] Github workflow 
+- [ ] Publish on conda (conda-forge) and PyPI
 	- Currently, we will use requirements.txt + setup.py
 	- In the future, we will move to pyproject.toml + setup.cfg
 
