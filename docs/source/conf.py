@@ -38,7 +38,7 @@ extensions = [
     # Check building time
     'sphinx.ext.duration',
     # Generate CLI documents 
-    #'sphinxcontrib.autoprogram',
+    'sphinxcontrib.autoprogram',
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
