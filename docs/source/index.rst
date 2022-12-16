@@ -63,7 +63,11 @@ PyPI install
 
    api_reference/index
 
+..toctree::
+   :maxdepth: 1
+   :caption: Change Log
 
+   change_log/index
 
 Indices and tables
 ==================

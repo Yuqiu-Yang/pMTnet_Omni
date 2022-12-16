@@ -7,9 +7,9 @@ import numpy as np
 # Typing 
 from typing import Union
 
-def read_file(file_path: str,
+def read_file(file_path: str=None,
              sep: str=",",
-             header: bool=True) -> Union[np.ndarray, pd.DataFrame]:
+             header: bool=True) -> pd.DataFrame:
     """This function reads in .csv or .txt files 
 
     The function provides a simple wrapper of pd.read_csv 
@@ -30,6 +30,10 @@ def read_file(file_path: str,
         An numpy ndarray containing curated pairs 
 
     """
-    pairing_data = pd.read_csv(file_path, sep=sep, header=header)
+    common_column_names = ["Va", "Vb", "CDRa"]
+    if file_path is None:
+        pairing_data = pd.DataFrame(None, columns=common_column_names)
+    else:
+        pairing_data = pd.read_csv(file_path, sep=sep, header=header)
 
     return pairing_data

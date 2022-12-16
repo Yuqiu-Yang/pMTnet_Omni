@@ -33,10 +33,17 @@ release = '0.0.1'
 extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
+    # View source code 
+    'sphinx.ext.viewcode',
+    # Check building time
     'sphinx.ext.duration',
+    # Generate CLI documents 
+    'sphinx.ext.autoprogram',
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
+    # Generate github history
+    'sphinx_git',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
