@@ -142,3 +142,7 @@ data/
 # model weights
 encoder_model_weights/
 classifier_model_weights/
+
+# ip
+*.ipynb
+back_up_code/
