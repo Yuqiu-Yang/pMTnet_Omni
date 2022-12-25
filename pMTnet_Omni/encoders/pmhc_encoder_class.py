@@ -1,20 +1,18 @@
-import os 
-import pandas as pd 
-import numpy as np
-import csv 
-
+# PyTorch modules
 import torch
 
+# Typing
 from typing import Optional 
 
+# Utilities and model
 from pMTnet_Omni.encoders.pmhc_encoder_model import pMHC
-from pMTnet_Omni.encoders.utilities import peptide_map
-from pMTnet_Omni.encoders.utilities import mhc_map
+from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
+
 
 class pmhc_encoder_class:
     def __init__(self,\
                  model_device: str,\
-                 pMHCcheckpoint_path: Optional[str]=None):
+                 pMHCcheckpoint_path: Optional[str]=None) -> None:
         self.model_device = model_device
         self.pmhc_model = pMHC().to(model_device)
         if pMHCcheckpoint_path is not None:

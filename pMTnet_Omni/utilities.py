@@ -4,28 +4,64 @@ import pandas as pd
 
 # Numeric manipulation 
 import numpy as np 
+import math
 
-# Strig operation 
+# String operation 
 import re
 
 # ROC curve
 from sklearn import metrics 
 from matplotlib import pyplot as plt
 
+# Progress bar
+from tqdm import tqdm 
+
 # Typing 
-from typing import Union, Optional
+from typing import Tuple
 
+def check_column_names(df: pd.DataFrame,
+                       background_tcrs_dir: str="./data/background_tcrs/") -> pd.DataFrame:
+    """Check if the columns are correct 
+    This function checks and corrects the column names provided in the user dataframe.
+    What's more, it can also automatically create some missing columns.
+    The column name to be used in all the following functions are:
+    "va": name of alpha V gene (NAMING CONVENTION HERE)
+    "cdr3a": amino acid sequence of CDR3 region on the alpha chain
+    "vaseq": amino acid sequence of the alpha V gene 
+    "vb": name of beta V gene
+    "cdr3b": amino acid sequence of CDR3 region on the beta chain
+    "vbseq": amino acid sequence of the beta V gene 
+    "peptide": amino acid sequence of the peptide presented by mhc 
+    "mhca": name of mhc alpha chain (NAMING CONVENTION HERE)
+    "mhcb": name of mhc beta chain 
+    "tcr_species": species of TCR (human or mouse)
+    "pmhc_species": species of peptide-mhc
 
-def check_column_names(df, background_tcrs_dir="./data/background_tcrs/"):
+    Parameters
+    ----------
+    df: pd.DataFrame
+        A pandas dataframe containing pairing data 
+    background_tcrs_dir: str
+        The directory with background TCR datasets 
+    
+    Returns
+    ---------
+    pd.DataFrame:
+        A pandas dataframe with corrected column names and possibly inferred missing information 
+
+    """
+    # Define the column names to be used 
     common_column_names = ["va", "cdr3a", "vaseq", "vb", "cdr3b", "vbseq",\
                             "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
+    # Get rid of spaces, convert names to lowercase, remove special characters 
+    print("Checking column names...\n")
     df.columns = df.columns.str.strip().str.lower().str.replace("_","").str.replace('\W','',regex=True)
     df_cols = df.columns.tolist()
     for i in range(len(df_cols)):
         df_cols[i] = re.sub(r'(?<=tcr).*(?=species)', "_", df_cols[i])
         df_cols[i] = re.sub(r'(?<=pmhc).*(?=species)', "_", df_cols[i])
     df.columns = df_cols
-
+    # Get names not presented in the user dataframe 
     user_df_set = set(df_cols)
     required_set = set(common_column_names)
     diff_set = required_set - user_df_set
@@ -47,8 +83,10 @@ def check_column_names(df, background_tcrs_dir="./data/background_tcrs/"):
         raise Exception("tcr_species have to be human or mouse")
 
     if all(name in df_cols for name in common_column_names):
+        print('Column names look fine\n')
         return df[common_column_names]
     else:
+        print('Seems like some information is missing.\nNo worries, we got you covered\n')
         human_alpha_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "human_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
         human_beta_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "human_beta.txt"), sep="\t", header=0)[["vb", "vbseq"]].drop_duplicates()
         mouse_alpha_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "mouse_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
@@ -56,7 +94,7 @@ def check_column_names(df, background_tcrs_dir="./data/background_tcrs/"):
         
         human_df = df[df['tcr_species'] == "human"]
         mouse_df = df[df['tcr_species'] == "mouse"]
-
+        
         if ("va" in diff_set) and ("vaseq" not in diff_set):
             # if va is missing but we have its sequence 
             human_df = human_df.merge(human_alpha_tcrs, on="vaseq", how='left')
@@ -79,13 +117,25 @@ def check_column_names(df, background_tcrs_dir="./data/background_tcrs/"):
 
 
 def check_data_sanity(df: pd.DataFrame,\
-                      mhc_path: str) -> pd.DataFrame:
+                      mhc_path: str="./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
     """Check the data sanity
-    This function will check if the data format conforms to what our model expects 
+    This function will check if the data format conforms to what our model expects
 
+    Parameters
+    ---------
+    df: pd.DataFrame
+        A pandas dataframe containing pairing data
+    mhc_path: str
+        The file path to valide mhcs 
+    
+    Returns
+    ---------
+    df.DataFrame
+        A pandas dataframe containing currated pairing data
     """
+    print("Check data format...\n")
     # We drop NAs first 
-    df=df.dropna()
+    df = df.dropna()
     print("Number of rows in this dataset after dropping NA: " + str(df.shape[0]))
     
     #2. antigen peptide longer than 30 will be dropped
@@ -113,6 +163,7 @@ def check_data_sanity(df: pd.DataFrame,\
     print("Number of rows in processed dataset: " + str(df.shape[0]))
 
     # Check Amino Acids are valid 
+    print("Checking if provided amino acids are valid\n")
     df['vaseq'] = check_amino_acids(df["vaseq"].to_frame())
     df['vbseq'] = check_amino_acids(df["vbseq"].to_frame())
     df['cdr3a'] = check_amino_acids(df["cdr3a"].to_frame())
@@ -121,9 +172,24 @@ def check_data_sanity(df: pd.DataFrame,\
 
     return df
 
-def check_amino_acids(df_column):
+def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
+    """Check amino acids are valid 
+    This function checks if the amino acids in one column of a dataframe are valid amino acids
+
+    Parameters
+    ---------
+    df_column: pd.DataFrame
+        One column of a dataframe 
+    
+    Returns
+    --------
+    pd.DataFrame
+        Currated column with invalid aa replaced by "_"
+    
+    """
     aa_set = set([*'ARDNCEQGHILKMFPSTWYV'])
-    for r in range(df_column.shape[0]):
+    print('Checking amino acids...\n')
+    for r in tqdm(range(df_column.shape[0])):
         wrong_aa = [aa for aa in df_column.iloc[r,0] if aa not in aa_set]
         for aa in wrong_aa:
             df_column.iloc[r,0] = df_column.iloc[r,0].replace(aa, "_")
@@ -131,33 +197,116 @@ def check_amino_acids(df_column):
 
 
 def read_file(file_path: str,\
-             sep: str,\
-             header: int,\
-             background_tcr_dir: str,\
-             mhc_path: str):
-    # Read in the dataframe 
+             sep: str=",",\
+             header: int=0,\
+             background_tcr_dir: str="./data/background_tcrs/",\
+             mhc_path: str="./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
+    """Reads in user dataframe and performs some basic data curration 
+
+    Parameters:
+    -----------
+    file_path: str
+        Path to the dataframe
+    sep: str
+        Same as sep in pd.DataFrame
+    header: int
+        Indicator of header position 
+    background_tcr_dir: str
+        The directory with background TCR datasets 
+    mhc_path: str
+        The file path to valide mhcs 
+
+    Returns
+    -------
+    pd.DataFrame
+        A currated pandas dataframe 
+    
+    """
+    print('Attempting to read in the dataframe...\n') 
     df = pd.read_csv(file_path, header=header, sep=sep)
     print("Number of rows in raw dataset: " + str(df.shape[0]))
     # Check column names 
     df = check_column_names(df, background_tcr_dir)
+    # Perform some basic curation 
     df = check_data_sanity(df, mhc_path)
     return df 
 
-
 def get_auroc(true_labels: np.ndarray,\
-              predicted_labels: np.ndarray):
-    """Compute and plot AUROC
+              predicted_labels: np.ndarray) -> float:
+    """Compute AUROC
+
+    Parameters
+    ---------
+    true_labels: np.ndarray
+        The true labels 
+    predicted_labels: np.ndarray
+        The output of the model 
+
+    Returns
+    --------
+    float
+        AUROC
+
     """
     auc = metrics.roc_auc_score(true_labels, predicted_labels)
     return auc
 
 def plot_roc_curve(true_labels: np.ndarray,\
                    predicted_labels: np.ndarray,
-                   **kwargs):
+                   **kwargs) -> None:
+    """Plot roc curve 
+
+    Parameters
+    ---------
+    true_labels: np.ndarray
+        The true labels 
+    predicted_labels: np.ndarray
+        The output of the model 
+    kwargs:
+        Other paremters for sklearn.metrics.roc_curve
+
+    """
     fpr, tpr, _ = metrics.roc_curve(true_labels, predicted_labels)
     plt.plot(fpr, tpr, **kwargs)
     plt.legend(**kwargs)
     plt.show()
 
+def batchify_check_size(check_size: list=[10, 20],
+                        load_size: int=10) -> Tuple[list, list]:
+    """Batchify check size list
 
+    Parameters
+    ---------
+    check_size: list
+        List of sizes to check 
+    load_size: int 
+        Size of the dataset loaded in the dataset class 
+    
+    Returns
+    --------
+    Tuple[list, list]
+        The first value is the batch sizes for the dataloader class
+        The second value is for indicating if the check size is finished
 
+    """
+    batch_size = []
+    batch_finished_indicator = []
+    for size in check_size:
+        if size <= load_size:
+            # if the size is less than the size of the dataset 
+            # we simply load that many data 
+            batch_size.append(size)
+            batch_finished_indicator.append(True)
+        else:
+            # Otherwise, we batchify 
+            n_batch = math.ceil(size/load_size)
+            i=1
+            while i < n_batch:
+                batch_size.append(load_size)
+                # Add False to the indicator to let 
+                # the program know that we are not finished 
+                # checking for this size yet 
+                batch_finished_indicator.append(False)
+                i += 1
+            batch_finished_indicator.append(True)
+    return batch_size, batch_finished_indicator

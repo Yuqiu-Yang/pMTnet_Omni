@@ -1,81 +1,80 @@
 # Data IO
 import pandas as pd 
+
+# Numeric manipulation 
 import numpy as np 
-import math
+
 # To entertain users 
 from tqdm import tqdm 
+
 # DL model 
 import torch
 
-from pMTnet_Omni.utilities import read_file, get_auroc, plot_roc_curve
+# Typing 
+from typing import Optional
+
+# pMTnet_Omni modules 
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.classifier import pMHCTCR
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
-
-# 
-# SOMETHING RELATED TO THE MODEL HERE
-
-# common_column_names = ["va", "cdr3a", "vaseq", "vb", "cdr3b", "vbseq",\
-#                         "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
-background_data_dir = "./data/background_tcrs"
-B = 2
-check_size = [10, 20]
-load_size = 10
-
-batch_size = []
-batch_finished_indicator = []
-for size in check_size:
-    if size <= load_size:
-        batch_size.append(size)
-        batch_finished_indicator.append(True)
-    else:
-        n_batch = math.ceil(size / load_size)
-        i=1
-        while i < n_batch:
-            batch_size.append(load_size)
-            batch_finished_indicator.append(False)
-            i += 1
-        batch_finished_indicator.append(True)
-
-load_embedding = False
-replacement = True
-
-model_device = 'cpu'
-rank_threshold = 0.03
-
-user_data_path = './test_data/test_df.csv'
-# user_df = read_file(file_path = user_data_path, sep="\t", header=0)
-user_df = read_file(file_path=user_data_path, sep=",", header=0,\
-             background_tcr_dir='./data/background_tcrs',\
-             mhc_path='./data/data_for_encoders/valid_mhc.txt')
+from pMTnet_Omni.utilities import read_file, get_auroc, plot_roc_curve, batchify_check_size
 
 
-encoder = encoder_class(encoder_data_dir='./data/data_for_encoders/')
-user_tcr_embedding, user_pmhc_embedding = encoder.encode(user_df, False)
+def predict(user_data_path: str='./test_data/test_df.csv',
+            sep: str=",",
+            header: int=0,
+            B: int = 2,
+            rank_threshold: float=0.03,
+            model_device: str='cpu',
+            load_embedding: bool=False,
+            background_data_dir: str="./data/background_tcrs",
+            mhc_path: str='./data/data_for_encoders/valid_mhc.txt',
+            encoder_data_dir='./data/data_for_encoders/',
+            vGdVAEacheckpoint_path: Optional[str]=None,\
+            vGdVAEbcheckpoint_path: Optional[str]=None,\
+            cdr3VAEacheckpoint_path: Optional[str]=None,\
+            cdr3VAEbcheckpoint_path: Optional[str]=None,\
+            pMHCcheckpoint_path: Optional[str]=None,
+            replacement: bool=True,
+            check_size: list=[10, 20],
+            load_size: int=10) -> dict:
+    
+    # Read in user dataframe 
+    user_df = read_file(file_path=user_data_path,
+                        sep=sep,
+                        header=header,
+                        background_tcr_dir=background_data_dir,
+                        mhc_path=mhc_path)
+    # Calculate the batch sizes for the dataloader class 
+    batch_size, batch_finished_indicator = batchify_check_size(check_size=check_size,
+                                                              load_size=load_size)
+    
+    # Creat the encoder
+    encoder = encoder_class(encoder_data_dir=encoder_data_dir,
+                            model_device=model_device,
+                            vGdVAEacheckpoint_path=vGdVAEacheckpoint_path,
+                            vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
+                            cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
+                            cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path,
+                            pMHCcheckpoint_path=pMHCcheckpoint_path)
+    user_tcr_embedding, user_pmhc_embedding = encoder.encode(df=user_df,
+                                                             is_embedding=load_embedding)
 
-# Regardless of the background tcrs,
-# we generate the model output 
+    ####
+    ## SET MODEL HERE 
+    pMTnet_Omni_model = pMHCTCR().to(model_device)
+    # LOAD MODE LHERE 
 
-####
-## SET MODEL HERE 
-pMTnet_Omni_model = pMHCTCR().to(model_device)
-# LOAD MODE LHERE 
+    user_result_tensor = pMTnet_Omni_model.predict(user_tcr_embedding, user_pmhc_embedding)
+    
+    user_df_output = user_result_tensor.numpy()
+    
+    n_rows = user_df.shape[0]
 
-pMTnet_Omni_model.eval()
-with torch.no_grad():
-    user_result_tensor = pMTnet_Omni_model(user_tcr_embedding, user_pmhc_embedding)
- 
+    tcr_species_df = user_df["tcr_species"].to_frame()
 
-user_df_output = user_result_tensor.numpy()
+    user_df_rank = {}
 
-n_rows = user_df.shape[0]
-
-tcr_species_df = user_df["tcr_species"].to_frame()
-
-user_df_rank = {}
-
-pMTnet_Omni_model.eval()
-with torch.no_grad():
     for b in range(B):
         # For each b, we reload the dataset 
         # This is potentially the slowest part of the algorithm 
@@ -109,7 +108,7 @@ with torch.no_grad():
                 background_tcr_embedding, _ = encoder.encode(tcrs, False)
                 duplicated_pmhc_embedding = user_pmhc_embedding[row, :].repeat(b_size, 1)
                 #####################################
-                background_result = pMTnet_Omni_model(background_tcr_embedding, duplicated_pmhc_embedding)
+                background_result = pMTnet_Omni_model.predict(background_tcr_embedding, duplicated_pmhc_embedding)
                 background_result = background_result.numpy()
                 batch_results = np.append(batch_results, background_result)
                 if batch_finished_indicator[batch_size_ind]:
@@ -121,8 +120,8 @@ with torch.no_grad():
                         user_df_rank[b] = np.append(user_df_rank[b], values=temp_rank)
                         break
                     batch_results = np.array([])
-                
+    temp = np.array([user_df_rank[0][0] for i in range(10)]) + np.random.standard_normal(10)
+    auc = get_auroc(np.random.binomial(1, 0.5, 10), temp)
+    plot_roc_curve(np.random.binomial(1, 0.5, 10), temp)
+    return user_df_rank             
 
-temp = np.array([user_df_rank[0][0] for i in range(10)]) + np.random.standard_normal(10)
-auc = get_auroc(np.random.binomial(1, 0.5, 10), temp)
-plot_roc_curve(np.random.binomial(1, 0.5, 10), temp)

@@ -1,14 +1,20 @@
+# Data IO 
 import os 
-import csv 
-import pandas as pd 
+import csv
+
+# Numeric manipulation 
 import numpy as np 
 
+# PyTorch
 import torch 
 
+# Typing 
 from typing import Optional
 
+# Subclasses 
 from pMTnet_Omni.encoders.tcr_encoder_class import tcr_encoder_class
 from pMTnet_Omni.encoders.pmhc_encoder_class import pmhc_encoder_class
+
 
 class encoder_class:
     def __init__(self,\
@@ -19,7 +25,6 @@ class encoder_class:
                  cdr3VAEacheckpoint_path: Optional[str]=None,\
                  cdr3VAEbcheckpoint_path: Optional[str]=None,\
                  pMHCcheckpoint_path: Optional[str]=None):
-        # aa_dict_dir='/work/DPDS/s213303/pmtnetv2/test_data/pmtnetv1/pMTnet-master/library/Atchley_factors.csv'
         # Build an amino acid dictionary 
         # to convert strings to numeric vectors 
         self.aa_dict_atchley=dict()
@@ -55,19 +60,19 @@ class encoder_class:
         self.pmhc_encoder = pmhc_encoder_class(model_device=self.model_device,\
                                                pMHCcheckpoint_path=pMHCcheckpoint_path)   
 
-    def encode(self, source_dataset, is_embedding):
+    def encode(self, df, is_embedding):
         tcr_embedding = None
         pmhc_embedding = None
         tcr_columns = ["vaseq", "vbseq", "cdr3a", "cdr3b"]
         if is_embedding:
-            tcr_embedding = torch.tensor(source_dataset, dtype=torch.float32)
+            tcr_embedding = torch.tensor(df, dtype=torch.float32)
         else:
-            if all([name in source_dataset.columns for name in tcr_columns]):
-                tcr_embedding = self.tcr_encoder.encode(source_dataset[tcr_columns],\
+            if all([name in df.columns for name in tcr_columns]):
+                tcr_embedding = self.tcr_encoder.encode(df[tcr_columns],\
                                                         self.aa_dict_atchley)    
             pmhc_columns = ["peptide", "mhca", "mhcb"]
-            if all([name in source_dataset.columns for name in pmhc_columns]):
-                pmhc_embedding = self.pmhc_encoder.encode(source_dataset[pmhc_columns],\
+            if all([name in df.columns for name in pmhc_columns]):
+                pmhc_embedding = self.pmhc_encoder.encode(df[pmhc_columns],\
                                                         self.aa_dict_atchley,\
                                                         self.mhc_dict)
         return tcr_embedding, pmhc_embedding

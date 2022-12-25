@@ -1,14 +1,11 @@
-import os 
-import pandas as pd 
-import numpy as np
-import csv 
-
+# PyTorch modules 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
+# Typing 
 from typing import Optional
 
+# Utilities and models 
 from pMTnet_Omni.encoders.v_alpha_encoder_model import vGdVAEa
 from pMTnet_Omni.encoders.v_beta_encoder_model import vGdVAEb
 from pMTnet_Omni.encoders.cdr3_alpha_encoder_model import cdr3VAEa
