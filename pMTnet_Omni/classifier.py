@@ -51,4 +51,4 @@ class pMHCTCR(nn.Module):
             Zpmhc = F.normalize(self.Proj1(pmhc))
             Ztcr = F.normalize(self.Proj2(tcr))
             logits = torch.div(torch.diagonal(torch.mm(Zpmhc, Ztcr.T)),self.temperature)
-            return logits
+            return logits.numpy()
