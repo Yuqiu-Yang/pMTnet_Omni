@@ -1,15 +1,18 @@
-# PyTorch modules 
+# Numeric manipulation
+import numpy as np
+
+# PyTorch modules
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 class pMHCTCR(nn.Module):
-    def __init__(self,\
-                 temperature: float=0.1,\
-                 proj_pmhc_dim_mi: int=50,\
-                 proj_tcr_dim_mi: int=70,\
-                 feat_dim: int=70) -> None:
+    def __init__(self,
+                 temperature: float = 0.1,
+                 proj_pmhc_dim_mi: int = 50,
+                 proj_tcr_dim_mi: int = 70,
+                 feat_dim: int = 70) -> None:
         """The main pMTnet_Omni classifier
 
         Parameters
@@ -38,17 +41,56 @@ class pMHCTCR(nn.Module):
             nn.ReLU(),
             nn.Linear(proj_tcr_dim_mi, feat_dim)
         )
-    
-    def forward(self, tcr, pmhc):
+
+    def forward(self,
+                tcr: torch.tensor,
+                pmhc: torch.tensor) -> torch.tensor:
+        """Forward pass of the classifier
+
+        Paramaters
+        ---------
+        tcr: torch.tensor
+            The TCR embedding tensor 
+        pmhc:torch.tensor
+            The pMHC embedding tensor
+
+        Returns
+        ---------
+        torch.tensor
+            The logit of the binding probability
+        
+        """
         Zpmhc = F.normalize(self.Proj1(pmhc))
         Ztcr = F.normalize(self.Proj2(tcr))
-        logits = torch.div(torch.diagonal(torch.mm(Zpmhc, Ztcr.T)),self.temperature)
+        logits = torch.div(torch.diagonal(
+            torch.mm(Zpmhc, Ztcr.T)), self.temperature)
         return logits
-    
-    def predict(self, tcr, pmhc):
+
+    def predict(self,
+                tcr: torch.tensor,
+                pmhc: torch.tensor) -> np.ndarray:
+        """Predict the binding probability of a given TCR-pMHC pair
+
+        This is basically the forward pass but with no gradient.
+        We also convert the result to numpy array.
+
+        Paramaters
+        ---------
+        tcr: torch.tensor
+            The TCR embedding tensor 
+        pmhc:torch.tensor
+            The pMHC embedding tensor
+
+        Returns
+        ---------
+        np.ndarray
+            The logit of the binding probability
+        
+        """
         self.eval()
         with torch.no_grad():
             Zpmhc = F.normalize(self.Proj1(pmhc))
             Ztcr = F.normalize(self.Proj2(tcr))
-            logits = torch.div(torch.diagonal(torch.mm(Zpmhc, Ztcr.T)),self.temperature)
+            logits = torch.div(torch.diagonal(
+                torch.mm(Zpmhc, Ztcr.T)), self.temperature)
             return logits.numpy()
