@@ -7,6 +7,8 @@ import numpy as np
 # PyTorch module
 import torch
 
+# User entertain 
+from tqdm import tqdm 
 
 def esm_mapping(mhc: str,
                 mhc_dict: dict) -> np.ndarray:
@@ -33,7 +35,8 @@ def esm_mapping(mhc: str,
 
 def mhc_map(df: pd.DataFrame,
             column_name: str,
-            mhc_dict: dict) -> np.ndarray:
+            mhc_dict: dict,
+            verbose: bool=False) -> np.ndarray:
     """Maps a column of MHC sequences to their ESM embeddings
 
     Parameters
@@ -54,7 +57,9 @@ def mhc_map(df: pd.DataFrame,
     """
     mhc_array = np.zeros((len(df), 1, 380, 1280), dtype=np.float32)
     mhc_seen = dict()
-    for pos, mhc in enumerate(df[column_name]):
+    verboseprint = print if verbose else lambda *a, **k: None
+    verboseprint("Mapping "+column_name+"\n")
+    for pos, mhc in tqdm(enumerate(df[column_name]), disable=(not verbose)):
         try:
             mhc_array[pos, 0] = mhc_seen[mhc]
         except:
@@ -101,7 +106,8 @@ def aa_mapping(peptide_seq: str,
 def peptide_map(df: pd.DataFrame,
                 column_name: str,
                 aa_dict_atchley: dict,
-                padding: int) -> np.ndarray:
+                padding: int,
+                verbose: bool=False) -> np.ndarray:
     """Converts a column of amino acid sequences to their Atchley Factors 
 
     Parameters
@@ -122,8 +128,10 @@ def peptide_map(df: pd.DataFrame,
         An array of the corresponding Atchley Factors 
     
     """
+    verboseprint = print if verbose else lambda *a, **k: None
     peptide_array = np.zeros((len(df), 1, padding, 5), dtype=np.float32)
-    for pos, seq in enumerate(df[column_name]):
+    verboseprint("Mapping "+column_name+"\n")
+    for pos, seq in tqdm(enumerate(df[column_name]), disable=(not verbose)):
         peptide_array[pos, 0] = aa_mapping(peptide_seq=seq,
                                            aa_dict_atchley=aa_dict_atchley,
                                            padding=padding)

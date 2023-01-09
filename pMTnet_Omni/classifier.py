@@ -9,50 +9,41 @@ import torch.nn.functional as F
 
 class pMHCTCR(nn.Module):
     def __init__(self,
-                 temperature: float = 0.1,
-                 proj_pmhc_dim_mi: int = 50,
-                 proj_tcr_dim_mi: int = 70,
-                 feat_dim: int = 70) -> None:
+                 proj_dim_mi: int = 50,
+                 feat_dim: int = 1) -> None:
         """The main pMTnet_Omni classifier
 
         Parameters
         ----------
-        temperature: float
-            Temperature
-        proj_pmhc_dim_mi: int
-            Latent dimension for pmhc 
-        proj_tcr_dim_mi: int
-            Latent dimension for tcr
-        feat_dim: int
-            Feature dimension 
          
         """
         super(pMHCTCR, self).__init__()
-        self.temperature = temperature
+        # self.temperature = temperature
         # Proj for pMHC
-        self.Proj1 = nn.Sequential(
-            nn.Linear(30, proj_pmhc_dim_mi),
+        self.Proj = nn.Sequential(
+            nn.Linear(100, proj_dim_mi),
+            nn.Dropout(),
             nn.ReLU(),
-            nn.Linear(proj_pmhc_dim_mi, feat_dim)
+            nn.Linear(proj_dim_mi, feat_dim)
         )
-        # Proj for TCR dim_in is 5*2+30*2
-        self.Proj2 = nn.Sequential(
-            nn.Linear(70, proj_tcr_dim_mi),
-            nn.ReLU(),
-            nn.Linear(proj_tcr_dim_mi, feat_dim)
-        )
+        # self.Proj1 = nn.Sequential(
+        #     nn.Linear(30, proj_pmhc_dim_mi),
+        #     nn.ReLU(),
+        #     nn.Linear(proj_pmhc_dim_mi, feat_dim)
+        # )
+        # # Proj for TCR dim_in is 5*2+30*2
+        # self.Proj2 = nn.Sequential(
+        #     nn.Linear(70, proj_tcr_dim_mi),
+        #     nn.ReLU(),
+        #     nn.Linear(proj_tcr_dim_mi, feat_dim)
+        # )
 
     def forward(self,
-                tcr: torch.tensor,
-                pmhc: torch.tensor) -> torch.tensor:
+                pmhctcr: torch.tensor) -> torch.tensor:
         """Forward pass of the classifier
 
         Paramaters
         ---------
-        tcr: torch.tensor
-            The TCR embedding tensor 
-        pmhc:torch.tensor
-            The pMHC embedding tensor
 
         Returns
         ---------
@@ -60,15 +51,15 @@ class pMHCTCR(nn.Module):
             The logit of the binding probability
         
         """
-        Zpmhc = F.normalize(self.Proj1(pmhc))
-        Ztcr = F.normalize(self.Proj2(tcr))
-        logits = torch.div(torch.diagonal(
-            torch.mm(Zpmhc, Ztcr.T)), self.temperature)
+        # Zpmhc = F.normalize(self.Proj1(pmhc))
+        # Ztcr = F.normalize(self.Proj2(tcr))
+        # logits = torch.div(torch.diagonal(
+        #     torch.mm(Zpmhc, Ztcr.T)), self.temperature)
+        logits = self.Proj(pmhctcr)
         return logits
 
     def predict(self,
-                tcr: torch.tensor,
-                pmhc: torch.tensor) -> np.ndarray:
+                pmhctcr: torch.tensor) -> np.ndarray:
         """Predict the binding probability of a given TCR-pMHC pair
 
         This is basically the forward pass but with no gradient.
@@ -76,10 +67,6 @@ class pMHCTCR(nn.Module):
 
         Paramaters
         ---------
-        tcr: torch.tensor
-            The TCR embedding tensor 
-        pmhc:torch.tensor
-            The pMHC embedding tensor
 
         Returns
         ---------
@@ -89,8 +76,5 @@ class pMHCTCR(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            Zpmhc = F.normalize(self.Proj1(pmhc))
-            Ztcr = F.normalize(self.Proj2(tcr))
-            logits = torch.div(torch.diagonal(
-                torch.mm(Zpmhc, Ztcr.T)), self.temperature)
-            return logits.numpy()
+            logits = self.Proj(pmhctcr)
+            return logits.to("cpu").numpy()

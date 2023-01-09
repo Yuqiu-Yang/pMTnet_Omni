@@ -3,6 +3,10 @@ import pandas as pd
 
 # PyTorch modules
 import torch
+import torch.nn.functional as F
+
+# User entertainment
+from tqdm import tqdm
 
 # Typing
 from typing import Optional
@@ -28,16 +32,23 @@ class pmhc_encoder_class:
         """
         self.model_device = model_device
         self.pmhc_model = pMHC().to(model_device)
+        
+        print("Attempt to load the pMHC encoder\n")
         if pMHCcheckpoint_path is not None:
             pMHCcheckpoint = torch.load(
                 pMHCcheckpoint_path, map_location=model_device)
             self.pmhc_model.load_state_dict(pMHCcheckpoint['net'])
+            print("Success\n")
+        else:
+            print("Check point is not provided. Use random weights\n")
+
         self.pmhc_model.eval()
 
     def encode(self,
                df: pd.DataFrame,
                aa_dict_atchley: dict,
-               mhc_dict: dict) -> torch.tensor:
+               mhc_dict: dict,
+               verbose: bool=False) -> torch.tensor:
         """Encodes all pMHCs in a dataframe 
 
         Parameters
@@ -61,12 +72,24 @@ class pmhc_encoder_class:
             x_p = torch.Tensor(peptide_map(df=df,
                                            column_name="peptide",
                                            aa_dict_atchley=aa_dict_atchley,
-                                           padding=30)).to(self.model_device)
+                                           padding=30,
+                                           verbose=verbose)).to(self.model_device)
             x_a = torch.Tensor(mhc_map(df=df,
                                        column_name="mhca",
-                                       mhc_dict=mhc_dict)).to(self.model_device)
+                                       mhc_dict=mhc_dict,
+                                       verbose=verbose)).to(self.model_device)
             x_b = torch.Tensor(mhc_map(df=df,
                                        column_name="mhcb",
-                                       mhc_dict=mhc_dict)).to(self.model_device)
-            pmhc_embedding, _ = self.pmhc_model(x_p, x_a, x_b)
-            return pmhc_embedding
+                                       mhc_dict=mhc_dict,
+                                       verbose=verbose)).to(self.model_device)
+            if self.model_device == "cpu":
+                print("As the device is cpu, we will encode pMHCs sequentially.\n")
+                pmhc_embedding = torch.zeros(df.shape[0], 30)
+                for i in tqdm(range(df.shape[0])):
+                    pmhc_embedding[i,:], _ = self.pmhc_model(x_p[[i],:], 
+                                                             x_a[[i],:],
+                                                             x_b[[i],:])
+            else:
+                print("As the device is not cpu, we will encode pMHCs in bulk.\n")
+                pmhc_embedding, _ = self.pmhc_model(x_p, x_a, x_b)
+            return F.normalize(pmhc_embedding)

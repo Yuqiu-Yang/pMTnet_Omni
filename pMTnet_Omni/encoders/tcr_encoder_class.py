@@ -50,25 +50,41 @@ class tcr_encoder_class:
 
         # Load models if paths are provided
         # va
+        print("Attempt to load the VA encoder\n")
         if vGdVAEacheckpoint_path is not None:
             vGdVAEacheckpoint = torch.load(
                 vGdVAEacheckpoint_path, map_location=model_device)
             self.va_model.load_state_dict(vGdVAEacheckpoint['net'])
+            print("Success\n")
+        else:
+            print("Check point is not provided. Use random weights\n")
         # vb
+        print("Attempt to load the VB encoder\n")
         if vGdVAEbcheckpoint_path is not None:
             vGdVAEbcheckpoint = torch.load(
                 vGdVAEbcheckpoint_path, map_location=model_device)
             self.vb_model.load_state_dict(vGdVAEbcheckpoint['net'])
+            print("Success\n")
+        else:
+            print("Check point is not provided. Use random weights\n")
         # cdr3a
+        print("Attempt to load the CDR3A encoder\n")
         if cdr3VAEacheckpoint_path is not None:
             cdr3VAEacheckpoint = torch.load(
                 cdr3VAEacheckpoint_path, map_location=model_device)
             self.cdr3a_model.load_state_dict(cdr3VAEacheckpoint['net'])
+            print("Success\n")
+        else:
+            print("Check point is not provided. Use random weights\n")
         # cdr3b
+        print("Attempt to load the CDR3B encoder\n")
         if cdr3VAEbcheckpoint_path is not None:
             cdr3VAEbcheckpoint = torch.load(
                 cdr3VAEbcheckpoint_path, map_location=model_device)
             self.cdr3b_model.load_state_dict(cdr3VAEbcheckpoint['net'])
+            print("Success\n")
+        else:
+            print("Check point is not provided. Use random weights\n")
 
         self.va_model.eval()
         self.vb_model.eval()
@@ -80,7 +96,8 @@ class tcr_encoder_class:
                 df: pd.DataFrame,
                 column_name: str,
                 aa_dict_atchley: dict,
-                padding: int) -> torch.tensor:
+                padding: int,
+                verbose: bool=False) -> torch.tensor:
         """Encode an array of Atchley Factors 
 
         Parameters
@@ -105,14 +122,17 @@ class tcr_encoder_class:
         seq = torch.Tensor(peptide_map(df=df,
                                        column_name=column_name,
                                        aa_dict_atchley=aa_dict_atchley,
-                                       padding=padding)).to(self.model_device)
+                                       padding=padding,
+                                       verbose=verbose)).to(self.model_device)
         encoded, _, _, _ = model(seq)
         encoded[torch.isnan(encoded).all(dim=1)] = 0
         return encoded
 
     def encode(self,
                df: pd.DataFrame,
-               aa_dict_atchley: dict) -> torch.tensor:
+               aa_dict_atchley: dict,
+               is_embedding: bool=False,
+               verbose: bool=False) -> torch.tensor:
         """Encodes all TCRs in a dataframe 
 
         Parameters
@@ -128,31 +148,49 @@ class tcr_encoder_class:
             A tensor of the encoded amino acids 
         
         """
-        with torch.no_grad():
-            va_embedding = F.normalize(self._encode(model=self.va_model,
-                                                    df=df,
-                                                    column_name="vaseq",
-                                                    aa_dict_atchley=aa_dict_atchley,
-                                                    padding=100))
+        if is_embedding:
+            # VA
+            ind = ["va" in n for n in df.columns]
+            va_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            # VB
+            ind = ["vb" in n for n in df.columns]
+            vb_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            # CDR3A
+            ind = ["cdr3a" in n for n in df.columns]
+            cdr3a_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            # CDR3B
+            ind = ["cdr3b" in n for n in df.columns]
+            cdr3b_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+        else:
+            with torch.no_grad():
+                va_embedding = F.normalize(self._encode(model=self.va_model,
+                                                        df=df,
+                                                        column_name="vaseq",
+                                                        aa_dict_atchley=aa_dict_atchley,
+                                                        padding=100,
+                                                        verbose=verbose))
 
-            vb_embedding = F.normalize(self._encode(model=self.vb_model,
-                                                    df=df,
-                                                    column_name="vbseq",
-                                                    aa_dict_atchley=aa_dict_atchley,
-                                                    padding=100))
+                vb_embedding = F.normalize(self._encode(model=self.vb_model,
+                                                        df=df,
+                                                        column_name="vbseq",
+                                                        aa_dict_atchley=aa_dict_atchley,
+                                                        padding=100,
+                                                        verbose=verbose))
 
-            cdr3a_embedding = F.normalize(self._encode(model=self.cdr3a_model,
-                                                       df=df,
-                                                       column_name="cdr3a",
-                                                       aa_dict_atchley=aa_dict_atchley,
-                                                       padding=25))
+                cdr3a_embedding = F.normalize(self._encode(model=self.cdr3a_model,
+                                                        df=df,
+                                                        column_name="cdr3a",
+                                                        aa_dict_atchley=aa_dict_atchley,
+                                                        padding=25,
+                                                        verbose=verbose))
 
-            cdr3b_embedding = F.normalize(self._encode(model=self.cdr3b_model,
-                                                       df=df,
-                                                       column_name="cdr3b",
-                                                       aa_dict_atchley=aa_dict_atchley,
-                                                       padding=25))
+                cdr3b_embedding = F.normalize(self._encode(model=self.cdr3b_model,
+                                                        df=df,
+                                                        column_name="cdr3b",
+                                                        aa_dict_atchley=aa_dict_atchley,
+                                                        padding=25,
+                                                        verbose=verbose))
 
-            tcr_embedding = torch.cat(
-                (va_embedding, vb_embedding, cdr3a_embedding, cdr3b_embedding), dim=1)
-            return tcr_embedding
+        tcr_embedding = torch.cat(
+            (va_embedding, vb_embedding, cdr3a_embedding, cdr3b_embedding), dim=1)
+        return tcr_embedding

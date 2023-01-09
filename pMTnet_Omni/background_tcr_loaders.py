@@ -35,7 +35,7 @@ class background_tcr_dataset_class:
         if not load_embedding:
             file_name = species + "_" + chain + ".txt"
         else:
-            file_name = species + "_" + chain + "embedding.txt"
+            file_name = species + "_" + chain + "_embedding.txt"
         
         self.data_path = os.path.join(data_dir, file_name)
         # Check number of observations 
