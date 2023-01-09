@@ -5,6 +5,10 @@ import pandas as pd
 # Numeric manipulation 
 import numpy as np 
 import math
+import random 
+
+# PyTorch 
+import torch
 
 # String operation 
 import re
@@ -195,7 +199,6 @@ def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
             df_column.iloc[r,0] = df_column.iloc[r,0].replace(aa, "_")
     return df_column
 
-
 def read_file(file_path: str,\
              sep: str=",",\
              header: int=0,\
@@ -253,7 +256,7 @@ def get_auroc(true_labels: np.ndarray,\
 
 def plot_roc_curve(true_labels: np.ndarray,\
                    predicted_labels: np.ndarray,
-                   **kwargs) -> None:
+                   label: str="") -> None:
     """Plot roc curve 
 
     Parameters
@@ -267,20 +270,22 @@ def plot_roc_curve(true_labels: np.ndarray,\
 
     """
     fpr, tpr, _ = metrics.roc_curve(true_labels, predicted_labels)
-    plt.plot(fpr, tpr, **kwargs)
-    plt.legend(**kwargs)
-    plt.show()
+    f = plt.figure()
+    plt.plot(fpr, tpr)
+    plt.title(label=label)
+    return f
+    
 
 def batchify_check_size(check_size: list=[10, 20],
-                        load_size: int=10) -> Tuple[list, list]:
+                        minibatch_size: int=10) -> Tuple[list, list]:
     """Batchify check size list
 
     Parameters
     ---------
     check_size: list
         List of sizes to check 
-    load_size: int 
-        Size of the dataset loaded in the dataset class 
+    minibatch_size: int 
+        Size of the minibatches in the dataset class 
     
     Returns
     --------
@@ -292,21 +297,58 @@ def batchify_check_size(check_size: list=[10, 20],
     batch_size = []
     batch_finished_indicator = []
     for size in check_size:
-        if size <= load_size:
+        if size <= minibatch_size:
             # if the size is less than the size of the dataset 
             # we simply load that many data 
             batch_size.append(size)
             batch_finished_indicator.append(True)
         else:
             # Otherwise, we batchify 
-            n_batch = math.ceil(size/load_size)
+            n_batch = math.ceil(size/minibatch_size)
             i=1
             while i < n_batch:
-                batch_size.append(load_size)
+                batch_size.append(minibatch_size)
                 # Add False to the indicator to let 
                 # the program know that we are not finished 
                 # checking for this size yet 
                 batch_finished_indicator.append(False)
                 i += 1
+            batch_size.append(minibatch_size)
             batch_finished_indicator.append(True)
     return batch_size, batch_finished_indicator
+
+def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
+
+    # Human class I starts with A, B, or C
+    human_class_i = ("A", "B", "C")
+    # Class II starts with DP, DQ, or DR
+    human_class_ii = ("DP", "DQ", "DR")
+    # Mouse class I starts with D, K, L, Q
+    mouse_class_i = tuple(["H-2-"+ i for i in ["D", "K", "L", "Q"]])
+    # Class II starts with IA, IE
+    mouse_class_ii = tuple(["H-2-"+ i for i in ["IA", "IE"]])
+    
+    mhc_class = []
+    for i in range(df.shape[0]):
+        mhca = df.at[i, "mhca"]
+        mhcb = df.at[i, "mhcb"]
+        if (mhca.startswith(human_class_i)) or (mhcb.startswith(human_class_i)):
+            mhc_class.append('human class i')
+        elif (mhca.startswith(human_class_ii)) or (mhcb.startswith(human_class_ii)):
+            mhc_class.append('human class ii')
+        elif (mhca.startswith(mouse_class_i)) or (mhcb.startswith(mouse_class_i)):
+            mhc_class.append('mouse class i')
+        elif (mhca.startswith(mouse_class_ii)) or (mhcb.startswith(mouse_class_ii)):
+            mhc_class.append('mouse class ii')
+        else:
+            raise ValueError("The class of neither "+mhca+" nor "+mhcb+" can be recognized.")
+    return pd.DataFrame(data={"mhc_class": mhc_class})
+
+def setup_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = False
