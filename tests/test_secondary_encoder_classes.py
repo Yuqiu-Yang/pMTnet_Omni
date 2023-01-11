@@ -9,7 +9,7 @@ from pMTnet_Omni.encoders.pmhc_encoder_class import pmhc_encoder_class
 from pMTnet_Omni.encoders.tcr_encoder_class import tcr_encoder_class
 
 aa_dict_atchley = dict()
-with open('./tests/test_data/Atchley_factors.csv', 'r') as aa:
+with open('./tests/test_data/data_for_encoders/Atchley_factors.csv', 'r') as aa:
     aa_reader = csv.reader(aa)
     next(aa_reader, None)
     for rows in aa_reader:
