@@ -44,7 +44,7 @@ def test_esm_mapping(mhc, mhc_dict):
 
 @pytest.mark.parametrize("column_name, mhc_dict, verbose", [
     ("mhca", mhc_dict, True),
-    ("mhca", mhc_dict, False),
+    ("mhcb", mhc_dict, False),
 ])
 def test_mhc_map(column_name, mhc_dict, verbose):
     test_df = pd.read_csv("./tests/test_data/test_df.csv")
