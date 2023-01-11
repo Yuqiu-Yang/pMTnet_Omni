@@ -59,7 +59,7 @@ def check_column_names(df: pd.DataFrame,
                             "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
     # Get rid of spaces, convert names to lowercase, remove special characters 
     print("Checking column names...\n")
-    df.columns = df.columns.str.strip().str.lower().str.replace("_","").str.replace('\W','',regex=True)
+    df.columns = df.columns.str.strip().str.lower().str.replace("_","").str.replace(r'\W','',regex=True)
     df_cols = df.columns.tolist()
     for i in range(len(df_cols)):
         df_cols[i] = re.sub(r'(?<=tcr).*(?=species)', "_", df_cols[i])
