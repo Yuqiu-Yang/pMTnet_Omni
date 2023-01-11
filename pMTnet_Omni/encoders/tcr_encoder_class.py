@@ -151,16 +151,16 @@ class tcr_encoder_class:
         if is_embedding:
             # VA
             ind = ["va" in n for n in df.columns]
-            va_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            va_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32, device=self.model_device)
             # VB
             ind = ["vb" in n for n in df.columns]
-            vb_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            vb_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32, device=self.model_device)
             # CDR3A
             ind = ["cdr3a" in n for n in df.columns]
-            cdr3a_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            cdr3a_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32, device=self.model_device)
             # CDR3B
             ind = ["cdr3b" in n for n in df.columns]
-            cdr3b_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32)
+            cdr3b_embedding = torch.tensor(df.loc[:, ind].values, dtype=torch.float32, device=self.model_device)
         else:
             with torch.no_grad():
                 va_embedding = F.normalize(self._encode(model=self.va_model,

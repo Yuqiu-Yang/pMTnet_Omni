@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm 
 
 # Typing 
-from typing import Tuple
+from typing import Tuple, Union
 
 def check_column_names(df: pd.DataFrame,
                        background_tcrs_dir: str="./data/background_tcrs/") -> pd.DataFrame:
@@ -199,6 +199,45 @@ def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
             df_column.iloc[r,0] = df_column.iloc[r,0].replace(aa, "_")
     return df_column
 
+def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
+    """Infer the MHC classes
+    
+    Parameters
+    ---------
+    df: pd.DataFrame
+        A pandas dataframe containing mhca, mhcb
+
+    Returns
+    ---------
+    pd.DataFrame
+        A column of a pandas dataframe with the inferred MHC classes 
+    """
+    df = df.reset_index()
+    # Human class I starts with A, B, or C
+    human_class_i = ("A", "B", "C")
+    # Class II starts with DP, DQ, or DR
+    human_class_ii = ("DP", "DQ", "DR")
+    # Mouse class I starts with D, K, L, Q
+    mouse_class_i = tuple(["H-2-"+ i for i in ["D", "K", "L", "Q"]])
+    # Class II starts with IA, IE
+    mouse_class_ii = tuple(["H-2-"+ i for i in ["IA", "IE"]])
+    
+    mhc_class = []
+    for i in range(df.shape[0]):
+        mhca = df.at[i, "mhca"]
+        mhcb = df.at[i, "mhcb"]
+        if (mhca.startswith(human_class_i)) or (mhcb.startswith(human_class_i)):
+            mhc_class.append('human class i')
+        elif (mhca.startswith(human_class_ii)) or (mhcb.startswith(human_class_ii)):
+            mhc_class.append('human class ii')
+        elif (mhca.startswith(mouse_class_i)) or (mhcb.startswith(mouse_class_i)):
+            mhc_class.append('mouse class i')
+        elif (mhca.startswith(mouse_class_ii)) or (mhcb.startswith(mouse_class_ii)):
+            mhc_class.append('mouse class ii')
+        else:
+            raise ValueError("The class of neither "+mhca+" nor "+mhcb+" can be recognized.")
+    return pd.DataFrame(data={"mhc_class": mhc_class})
+
 def read_file(file_path: str,\
              sep: str=",",\
              header: int=0,\
@@ -232,17 +271,20 @@ def read_file(file_path: str,\
     df = check_column_names(df, background_tcr_dir)
     # Perform some basic curation 
     df = check_data_sanity(df, mhc_path)
+    mhc_class = get_mhc_class(df=df)
+    df = pd.concat([df, mhc_class], axis=1, ignore_index=False)
     return df 
 
-def get_auroc(true_labels: np.ndarray,\
-              predicted_labels: np.ndarray) -> float:
+def get_auroc(true_labels: Union[np.ndarray, pd.DataFrame],\
+              predictions: Union[np.ndarray, pd.DataFrame],
+              ndigits: int=3) -> float:
     """Compute AUROC
 
     Parameters
     ---------
-    true_labels: np.ndarray
+    true_labels: Union[np.ndarray, pd.DataFrame]
         The true labels 
-    predicted_labels: np.ndarray
+    predictions: Union[np.ndarray, pd.DataFrame]
         The output of the model 
 
     Returns
@@ -251,31 +293,30 @@ def get_auroc(true_labels: np.ndarray,\
         AUROC
 
     """
-    auc = metrics.roc_auc_score(true_labels, predicted_labels)
-    return auc
+    auc = metrics.roc_auc_score(true_labels, predictions)
+    return round(auc, ndigits=ndigits) 
 
-def plot_roc_curve(true_labels: np.ndarray,\
-                   predicted_labels: np.ndarray,
+def plot_roc_curve(true_labels: Union[np.ndarray, pd.DataFrame],\
+                    predictions: Union[np.ndarray, pd.DataFrame],
                    label: str="") -> None:
     """Plot roc curve 
 
     Parameters
     ---------
-    true_labels: np.ndarray
+    true_labels: Union[np.ndarray, pd.DataFrame]
         The true labels 
-    predicted_labels: np.ndarray
+    predictions: Union[np.ndarray, pd.DataFrame]
         The output of the model 
-    kwargs:
-        Other paremters for sklearn.metrics.roc_curve
+    label:
+        Plot title 
 
     """
-    fpr, tpr, _ = metrics.roc_curve(true_labels, predicted_labels)
+    fpr, tpr, _ = metrics.roc_curve(true_labels, predictions)
     f = plt.figure()
     plt.plot(fpr, tpr)
     plt.title(label=label)
     return f
     
-
 def batchify_check_size(check_size: list=[10, 20],
                         minibatch_size: int=10) -> Tuple[list, list]:
     """Batchify check size list
@@ -317,34 +358,40 @@ def batchify_check_size(check_size: list=[10, 20],
             batch_finished_indicator.append(True)
     return batch_size, batch_finished_indicator
 
-def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
+def partition_dataframe(df: pd.DataFrame,
+                        partition_size: int) -> dict:
+    """Partitions a given dataframe into chunks of the given size 
 
-    # Human class I starts with A, B, or C
-    human_class_i = ("A", "B", "C")
-    # Class II starts with DP, DQ, or DR
-    human_class_ii = ("DP", "DQ", "DR")
-    # Mouse class I starts with D, K, L, Q
-    mouse_class_i = tuple(["H-2-"+ i for i in ["D", "K", "L", "Q"]])
-    # Class II starts with IA, IE
-    mouse_class_ii = tuple(["H-2-"+ i for i in ["IA", "IE"]])
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The dataframe to be partitioned 
+    partition_size: int 
+        The chunk size
+        
+    Returns
+    ---------
+    dict
+        A dictionary of all the partitions 
     
-    mhc_class = []
-    for i in range(df.shape[0]):
-        mhca = df.at[i, "mhca"]
-        mhcb = df.at[i, "mhcb"]
-        if (mhca.startswith(human_class_i)) or (mhcb.startswith(human_class_i)):
-            mhc_class.append('human class i')
-        elif (mhca.startswith(human_class_ii)) or (mhcb.startswith(human_class_ii)):
-            mhc_class.append('human class ii')
-        elif (mhca.startswith(mouse_class_i)) or (mhcb.startswith(mouse_class_i)):
-            mhc_class.append('mouse class i')
-        elif (mhca.startswith(mouse_class_ii)) or (mhcb.startswith(mouse_class_ii)):
-            mhc_class.append('mouse class ii')
-        else:
-            raise ValueError("The class of neither "+mhca+" nor "+mhcb+" can be recognized.")
-    return pd.DataFrame(data={"mhc_class": mhc_class})
+    """
+    partitions = {}
+    n_partitions = math.ceil(df.shape[0]/partition_size)
+    column_names = df.columns
+    for i in range(n_partitions):
+        partitions[i] = df[i*partition_size : (i+1)*partition_size].reset_index(drop=True)
+        partitions[i].columns = column_names
+    return partitions
 
-def setup_seed(seed):
+def setup_seed(seed: int) -> None:
+    """Setup seed 
+
+    Parameters
+    ----------
+    seed: int
+        Seed
+    
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
