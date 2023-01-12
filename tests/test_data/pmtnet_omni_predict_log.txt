@@ -1,0 +1,516 @@
+Starting trial 1 out of 1 total tries
+
+Loading background TCR datasets
+
+Load size greater than the dataset. Setting the load size to the size of the dataset
+
+Load size greater than the dataset. Setting the load size to the size of the dataset
+
+Load size greater than the dataset. Setting the load size to the size of the dataset
+
+Load size greater than the dataset. Setting the load size to the size of the dataset
+
+          va             cdr3a  ...     logit rank_0
+0  TRAV19*01  CALSDRYGGATNKLIF  ... -0.063144    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+           va           cdr3a  ...     logit rank_0
+1  TRAV8-3*01  CAVVFTGGGNKLTF  ... -0.073489    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+           va            cdr3a  ...     logit rank_0
+2  TRAV7-3*04  CAVSDRGSALGRLHF  ...  0.034904    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 7
+
+	Current batch is done. The final position is 1 out of 6
+
+             va          cdr3a  ...     logit rank_0
+3  TRAV12N-3*01  CALRTQVVGQLTF  ... -0.043837    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 2th out of 3
+
+	Rank in the current batch so far is 2th out of 7
+
+	Current batch is done. The final position is 2 out of 6
+
+  va cdr3a vaseq        vb  ... pmhc_species      mhc_class     logit rank_0
+0                 TRBV9*01  ...        human  human class i -0.050719    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+  va cdr3a vaseq          vb  ... pmhc_species      mhc_class     logit rank_0
+1                 TRBV7-9*01  ...        human  human class i -0.014786    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 2th out of 3
+
+	Rank in the current batch so far is 2th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 2th out of 3
+
+	Rank in the current batch so far is 3th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 7
+
+	Current batch is done. The final position is 5 out of 6
+
+  va cdr3a vaseq        vb  ... pmhc_species      mhc_class     logit rank_0
+2                 TRBV1*01  ...        mouse  mouse class i -0.006607    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 7
+
+	Current batch is done. The final position is 1 out of 6
+
+  va cdr3a vaseq        vb  ... pmhc_species      mhc_class     logit rank_0
+3                 TRBV5*01  ...        mouse  mouse class i -0.069006    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+          va             cdr3a  ...     logit rank_0
+0  TRAV19*01  CALSDRYGGATNKLIF  ... -0.058149    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+           va           cdr3a  ...     logit rank_0
+1  TRAV8-3*01  CAVVFTGGGNKLTF  ... -0.077553    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 3th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 5th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 3th out of 3
+
+	Rank in the current batch so far is 7th out of 7
+
+	Current batch is done. The final position is 7 out of 6
+
+           va            cdr3a  ...     logit rank_0
+2  TRAV7-3*04  CAVSDRGSALGRLHF  ...  0.014694    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 7
+
+	Current batch is done. The final position is 1 out of 6
+
+             va          cdr3a  ...     logit rank_0
+3  TRAV12N-3*01  CALRTQVVGQLTF  ... -0.016943    inf
+
+[1 rows x 14 columns]
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 3
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 5
+
+Verifying using 5 background tcrs
+
+	Loading minibatch of 2 tcrs
+
+	Encoding background tcrs
+
+	Predicting background tcrs
+
+	Rank in the current minibatch is 1th out of 3
+
+	Rank in the current batch so far is 1th out of 7
+
+	Current batch is done. The final position is 1 out of 6
+

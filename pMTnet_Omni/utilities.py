@@ -1,30 +1,31 @@
 # Data IO
-import os 
-import pandas as pd 
+import os
+import pandas as pd
 
-# Numeric manipulation 
-import numpy as np 
+# Numeric manipulation
+import numpy as np
 import math
-import random 
+import random
 
-# PyTorch 
+# PyTorch
 import torch
 
-# String operation 
+# String operation
 import re
 
 # ROC curve
-from sklearn import metrics 
+from sklearn import metrics
 from matplotlib import pyplot as plt
 
 # Progress bar
-from tqdm import tqdm 
+from tqdm import tqdm
 
-# Typing 
+# Typing
 from typing import Tuple, Union
 
+
 def check_column_names(df: pd.DataFrame,
-                       background_tcrs_dir: str="./data/background_tcrs/") -> pd.DataFrame:
+                       background_tcrs_dir: str = "./data/background_tcrs/") -> pd.DataFrame:
     """Check if the columns are correct 
     This function checks and corrects the column names provided in the user dataframe.
     What's more, it can also automatically create some missing columns.
@@ -47,35 +48,36 @@ def check_column_names(df: pd.DataFrame,
         A pandas dataframe containing pairing data 
     background_tcrs_dir: str
         The directory with background TCR datasets 
-    
+
     Returns
     ---------
     pd.DataFrame:
         A pandas dataframe with corrected column names and possibly inferred missing information 
 
     """
-    # Define the column names to be used 
-    common_column_names = ["va", "cdr3a", "vaseq", "vb", "cdr3b", "vbseq",\
-                            "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
-    # Get rid of spaces, convert names to lowercase, remove special characters 
+    # Define the column names to be used
+    common_column_names = ["va", "cdr3a", "vaseq", "vb", "cdr3b", "vbseq",
+                           "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
+    # Get rid of spaces, convert names to lowercase, remove special characters
     print("Checking column names...\n")
-    df.columns = df.columns.str.strip().str.lower().str.replace("_","").str.replace(r'\W','',regex=True)
+    df.columns = df.columns.str.strip().str.lower().str.replace(
+        "_", "").str.replace(r'\W', '', regex=True)
     df_cols = df.columns.tolist()
     for i in range(len(df_cols)):
         df_cols[i] = re.sub(r'(?<=tcr).*(?=species)', "_", df_cols[i])
         df_cols[i] = re.sub(r'(?<=pmhc).*(?=species)', "_", df_cols[i])
     df.columns = df_cols
-    # Get names not presented in the user dataframe 
+    # Get names not presented in the user dataframe
     user_df_set = set(df_cols)
     required_set = set(common_column_names)
     diff_set = required_set - user_df_set
 
-    error_messages = "".join(["Column " + name + " can not be found.\n"\
-                     for name in ["cdr3a", "cdr3b", "peptide", "mhca", "mhcb",\
-                      "tcr_species", "pmhc_species"] if name in diff_set])
-    
+    error_messages = "".join(["Column " + name + " can not be found.\n"
+                              for name in ["cdr3a", "cdr3b", "peptide", "mhca", "mhcb",
+                                           "tcr_species", "pmhc_species"] if name in diff_set])
+
     if error_messages != "":
-        raise Exception(error_messages) 
+        raise Exception(error_messages)
 
     if ("va" in diff_set) and ("vaseq" in diff_set):
         raise Exception("At least one of va and vaseq need to exist")
@@ -91,28 +93,32 @@ def check_column_names(df: pd.DataFrame,
         return df[common_column_names]
     else:
         print('Seems like some information is missing.\nNo worries, we got you covered\n')
-        human_alpha_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "human_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
-        human_beta_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "human_beta.txt"), sep="\t", header=0)[["vb", "vbseq"]].drop_duplicates()
-        mouse_alpha_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "mouse_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
-        mouse_beta_tcrs = pd.read_csv(os.path.join(background_tcrs_dir, "mouse_beta.txt"), sep="\t", header=0)[["vb", "vbseq"]].drop_duplicates()
-        
+        human_alpha_tcrs = pd.read_csv(os.path.join(
+            background_tcrs_dir, "human_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
+        human_beta_tcrs = pd.read_csv(os.path.join(
+            background_tcrs_dir, "human_beta.txt"), sep="\t", header=0)[["vb", "vbseq"]].drop_duplicates()
+        mouse_alpha_tcrs = pd.read_csv(os.path.join(
+            background_tcrs_dir, "mouse_alpha.txt"), sep="\t", header=0)[["va", "vaseq"]].drop_duplicates()
+        mouse_beta_tcrs = pd.read_csv(os.path.join(
+            background_tcrs_dir, "mouse_beta.txt"), sep="\t", header=0)[["vb", "vbseq"]].drop_duplicates()
+
         human_df = df[df['tcr_species'] == "human"]
         mouse_df = df[df['tcr_species'] == "mouse"]
-        
+
         if ("va" in diff_set) and ("vaseq" not in diff_set):
-            # if va is missing but we have its sequence 
+            # if va is missing but we have its sequence
             human_df = human_df.merge(human_alpha_tcrs, on="vaseq", how='left')
             mouse_df = mouse_df.merge(mouse_alpha_tcrs, on="vaseq", how='left')
         if ("va" not in diff_set) and ("vaseq" in diff_set):
-            # if we have the name but we are missing the sequence 
+            # if we have the name but we are missing the sequence
             human_df = human_df.merge(human_alpha_tcrs, on="va", how='left')
             mouse_df = mouse_df.merge(mouse_alpha_tcrs, on="va", how='left')
         if ("vb" in diff_set) and ("vbseq" not in diff_set):
-            # if vb is missing but we have its sequence 
+            # if vb is missing but we have its sequence
             human_df = human_df.merge(human_beta_tcrs, on="vbseq", how='left')
             mouse_df = mouse_df.merge(mouse_beta_tcrs, on="vbseq", how='left')
         if ("vb" not in diff_set) and ("vbseq" in diff_set):
-            # if we have the name but we are missing the sequence 
+            # if we have the name but we are missing the sequence
             human_df = human_df.merge(human_beta_tcrs, on="vb", how='left')
             mouse_df = mouse_df.merge(mouse_beta_tcrs, on="vb", how='left')
 
@@ -120,8 +126,8 @@ def check_column_names(df: pd.DataFrame,
         return df[common_column_names]
 
 
-def check_data_sanity(df: pd.DataFrame,\
-                      mhc_path: str="./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
+def check_data_sanity(df: pd.DataFrame,
+                      mhc_path: str = "./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
     """Check the data sanity
     This function will check if the data format conforms to what our model expects
 
@@ -131,26 +137,28 @@ def check_data_sanity(df: pd.DataFrame,\
         A pandas dataframe containing pairing data
     mhc_path: str
         The file path to valide mhcs 
-    
+
     Returns
     ---------
     df.DataFrame
         A pandas dataframe containing currated pairing data
     """
     print("Check data format...\n")
-    # We drop NAs first 
+    # We drop NAs first
     df = df.dropna()
-    print("Number of rows in this dataset after dropping NA: " + str(df.shape[0]))
-    
-    #2. antigen peptide longer than 30 will be dropped
+    print("Number of rows in this dataset after dropping NA: " +
+          str(df.shape[0]))
+
+    # 2. antigen peptide longer than 30 will be dropped
     num_row = df.shape[0]
-    df_antigen_dropped = df[df.peptide.str.len()>30]
-    df = df[df.peptide.str.len()<=30]
-    if((num_row-df.shape[0])>0):
-        print(str(num_row-df.shape[0])+' antigens longer than ' + str(30) + 'aa are dropped:')
+    df_antigen_dropped = df[df.peptide.str.len() > 30]
+    df = df[df.peptide.str.len() <= 30]
+    if((num_row-df.shape[0]) > 0):
+        print(
+            str(num_row-df.shape[0])+' antigens longer than ' + str(30) + 'aa are dropped:')
         print(df_antigen_dropped)
-    
-    #3. input MHC that is not in the ESM dictionary will be dropped
+
+    # 3. input MHC that is not in the ESM dictionary will be dropped
     num_row = df.shape[0]
     with open(mhc_path, 'r') as f:
         mhc_dic_keys = f.read().splitlines()
@@ -159,14 +167,15 @@ def check_data_sanity(df: pd.DataFrame,\
     df_mhc_beta_dropped = df[~df["mhcb"].isin(mhc_dic_keys)]
     df = df[df["mhca"].isin(mhc_dic_keys)]
     df = df[df["mhcb"].isin(mhc_dic_keys)]
-    if((num_row-df.shape[0])>0):
-        print(str(num_row-df.shape[0])+' MHCs without ESM embedding are dropped:')
+    if((num_row-df.shape[0]) > 0):
+        print(str(num_row-df.shape[0]) +
+              ' MHCs without ESM embedding are dropped:')
         print(pd.unique(df_mhc_alpha_dropped["mhca"]))
         print(pd.unique(df_mhc_beta_dropped["mhcb"]))
     df = df.reset_index(drop=True)
     print("Number of rows in processed dataset: " + str(df.shape[0]))
 
-    # Check Amino Acids are valid 
+    # Check Amino Acids are valid
     print("Checking if provided amino acids are valid\n")
     df['vaseq'] = check_amino_acids(df["vaseq"].to_frame())
     df['vbseq'] = check_amino_acids(df["vbseq"].to_frame())
@@ -176,6 +185,7 @@ def check_data_sanity(df: pd.DataFrame,\
 
     return df
 
+
 def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
     """Check amino acids are valid 
     This function checks if the amino acids in one column of a dataframe are valid amino acids
@@ -184,24 +194,25 @@ def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
     ---------
     df_column: pd.DataFrame
         One column of a dataframe 
-    
+
     Returns
     --------
     pd.DataFrame
         Currated column with invalid aa replaced by "_"
-    
+
     """
     aa_set = set([*'ARDNCEQGHILKMFPSTWYV'])
     print('Checking amino acids...\n')
     for r in tqdm(range(df_column.shape[0])):
-        wrong_aa = [aa for aa in df_column.iloc[r,0] if aa not in aa_set]
+        wrong_aa = [aa for aa in df_column.iloc[r, 0] if aa not in aa_set]
         for aa in wrong_aa:
-            df_column.iloc[r,0] = df_column.iloc[r,0].replace(aa, "_")
+            df_column.iloc[r, 0] = df_column.iloc[r, 0].replace(aa, "_")
     return df_column
+
 
 def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
     """Infer the MHC classes
-    
+
     Parameters
     ---------
     df: pd.DataFrame
@@ -218,10 +229,10 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
     # Class II starts with DP, DQ, or DR
     human_class_ii = ("DP", "DQ", "DR")
     # Mouse class I starts with D, K, L, Q
-    mouse_class_i = tuple(["H-2-"+ i for i in ["D", "K", "L", "Q"]])
+    mouse_class_i = tuple(["H-2-" + i for i in ["D", "K", "L", "Q"]])
     # Class II starts with IA, IE
-    mouse_class_ii = tuple(["H-2-"+ i for i in ["IA", "IE"]])
-    
+    mouse_class_ii = tuple(["H-2-" + i for i in ["IA", "IE"]])
+
     mhc_class = []
     for i in range(df.shape[0]):
         mhca = df.at[i, "mhca"]
@@ -235,14 +246,16 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
         elif (mhca.startswith(mouse_class_ii)) or (mhcb.startswith(mouse_class_ii)):
             mhc_class.append('mouse class ii')
         else:
-            raise ValueError("The class of neither "+mhca+" nor "+mhcb+" can be recognized.")
+            raise ValueError("The class of neither "+mhca +
+                             " nor "+mhcb+" can be recognized.")
     return pd.DataFrame(data={"mhc_class": mhc_class})
 
-def read_file(file_path: str,\
-             sep: str=",",\
-             header: int=0,\
-             background_tcr_dir: str="./data/background_tcrs/",\
-             mhc_path: str="./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
+
+def read_file(file_path: str,
+              sep: str = ",",
+              header: int = 0,
+              background_tcr_dir: str = "./data/background_tcrs/",
+              mhc_path: str = "./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
     """Reads in user dataframe and performs some basic data curration 
 
     Parameters:
@@ -262,22 +275,23 @@ def read_file(file_path: str,\
     -------
     pd.DataFrame
         A currated pandas dataframe 
-    
+
     """
-    print('Attempting to read in the dataframe...\n') 
+    print('Attempting to read in the dataframe...\n')
     df = pd.read_csv(file_path, header=header, sep=sep)
     print("Number of rows in raw dataset: " + str(df.shape[0]))
-    # Check column names 
+    # Check column names
     df = check_column_names(df, background_tcr_dir)
-    # Perform some basic curation 
+    # Perform some basic curation
     df = check_data_sanity(df, mhc_path)
     mhc_class = get_mhc_class(df=df)
     df = pd.concat([df, mhc_class], axis=1, ignore_index=False)
-    return df 
+    return df
 
-def get_auroc(true_labels: Union[np.ndarray, pd.DataFrame],\
+
+def get_auroc(true_labels: Union[np.ndarray, pd.DataFrame],
               predictions: Union[np.ndarray, pd.DataFrame],
-              ndigits: int=3) -> float:
+              ndigits: int = 3) -> float:
     """Compute AUROC
 
     Parameters
@@ -294,11 +308,12 @@ def get_auroc(true_labels: Union[np.ndarray, pd.DataFrame],\
 
     """
     auc = metrics.roc_auc_score(true_labels, predictions)
-    return round(auc, ndigits=ndigits) 
+    return round(auc, ndigits=ndigits)
 
-def plot_roc_curve(true_labels: Union[np.ndarray, pd.DataFrame],\
-                    predictions: Union[np.ndarray, pd.DataFrame],
-                   label: str="") -> None:
+
+def plot_roc_curve(true_labels: Union[np.ndarray, pd.DataFrame],
+                   predictions: Union[np.ndarray, pd.DataFrame],
+                   label: str = "") -> None:
     """Plot roc curve 
 
     Parameters
@@ -316,9 +331,10 @@ def plot_roc_curve(true_labels: Union[np.ndarray, pd.DataFrame],\
     plt.plot(fpr, tpr)
     plt.title(label=label)
     return f
-    
-def batchify_check_size(check_size: list=[10, 20],
-                        minibatch_size: int=10) -> Tuple[list, list]:
+
+
+def batchify_check_size(check_size: list = [10, 20],
+                        minibatch_size: int = 10) -> Tuple[list, list]:
     """Batchify check size list
 
     Parameters
@@ -327,7 +343,7 @@ def batchify_check_size(check_size: list=[10, 20],
         List of sizes to check 
     minibatch_size: int 
         Size of the minibatches in the dataset class 
-    
+
     Returns
     --------
     Tuple[list, list]
@@ -339,24 +355,25 @@ def batchify_check_size(check_size: list=[10, 20],
     batch_finished_indicator = []
     for size in check_size:
         if size <= minibatch_size:
-            # if the size is less than the size of the dataset 
-            # we simply load that many data 
+            # if the size is less than the size of the dataset
+            # we simply load that many data
             batch_size.append(size)
             batch_finished_indicator.append(True)
         else:
-            # Otherwise, we batchify 
+            # Otherwise, we batchify
             n_batch = math.ceil(size/minibatch_size)
-            i=1
+            i = 1
             while i < n_batch:
                 batch_size.append(minibatch_size)
-                # Add False to the indicator to let 
-                # the program know that we are not finished 
-                # checking for this size yet 
+                # Add False to the indicator to let
+                # the program know that we are not finished
+                # checking for this size yet
                 batch_finished_indicator.append(False)
                 i += 1
             batch_size.append(minibatch_size)
             batch_finished_indicator.append(True)
     return batch_size, batch_finished_indicator
+
 
 def partition_dataframe(df: pd.DataFrame,
                         partition_size: int) -> dict:
@@ -368,20 +385,22 @@ def partition_dataframe(df: pd.DataFrame,
         The dataframe to be partitioned 
     partition_size: int 
         The chunk size
-        
+
     Returns
     ---------
     dict
         A dictionary of all the partitions 
-    
+
     """
     partitions = {}
     n_partitions = math.ceil(df.shape[0]/partition_size)
     column_names = df.columns
     for i in range(n_partitions):
-        partitions[i] = df[i*partition_size : (i+1)*partition_size].reset_index(drop=True)
+        partitions[i] = df[i *
+                           partition_size: (i+1)*partition_size].reset_index(drop=True)
         partitions[i].columns = column_names
     return partitions
+
 
 def setup_seed(seed: int) -> None:
     """Setup seed 
@@ -390,7 +409,7 @@ def setup_seed(seed: int) -> None:
     ----------
     seed: int
         Seed
-    
+
     """
     random.seed(seed)
     np.random.seed(seed)

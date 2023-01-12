@@ -19,7 +19,7 @@ class cdr3VAEa(nn.Module):
         self.layer2 = nn.Sequential(
             nn.Conv2d(1, 150, (2, 5)),
             nn.ReLU(),
-            #nn.BatchNorm2d(30),
+            # nn.BatchNorm2d(30),
             nn.MaxPool2d((25-2+1, 1)),
             nn.Flatten(),
             nn.Linear(150, int(150/2)),
@@ -29,7 +29,7 @@ class cdr3VAEa(nn.Module):
         self.layer3 = nn.Sequential(
             nn.Conv2d(1, 150, (3, 5)),
             nn.ReLU(),
-            #nn.BatchNorm2d(30),
+            # nn.BatchNorm2d(30),
             nn.MaxPool2d((25-3+1, 1)),
             nn.Flatten(),
             nn.Linear(150, int(150/2)),
