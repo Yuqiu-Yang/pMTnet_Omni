@@ -1,10 +1,10 @@
 import pytest
 import torch
-import pandas as pd 
-import numpy as np 
-import csv 
-import os 
-from tqdm import tqdm 
+import pandas as pd
+import numpy as np
+import csv
+import os
+from tqdm import tqdm
 
 from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
 from pMTnet_Omni.encoders.cdr3_alpha_encoder_model import cdr3VAEa
@@ -36,67 +36,76 @@ test_df = pd.read_csv("./tests/test_data/test_df.csv")
 
 #####################
 # CDR3A
-@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected",[
+
+
+@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected", [
     (test_df, "cdr3a", aa_dict_atchley, 25, True, 30)
 ])
 def test_cdr3VAEa(df, column_name, aa_dict_atchley, padding, verbose, expected):
     with torch.no_grad():
         model = cdr3VAEa()
         seq = torch.Tensor(peptide_map(df=df,
-                                        column_name=column_name,
-                                        aa_dict_atchley=aa_dict_atchley,
-                                        padding=padding,
-                                        verbose=verbose)).to("cpu")
+                                       column_name=column_name,
+                                       aa_dict_atchley=aa_dict_atchley,
+                                       padding=padding,
+                                       verbose=verbose)).to("cpu")
         encoded, _, _, _ = model(seq)
     assert encoded.shape[1] == expected
 
 #################
 # CDR3B
-@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected",[
+
+
+@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected", [
     (test_df, "cdr3b", aa_dict_atchley, 25, True, 30)
 ])
 def test_cdr3VAEb(df, column_name, aa_dict_atchley, padding, verbose, expected):
     with torch.no_grad():
         model = cdr3VAEb()
         seq = torch.Tensor(peptide_map(df=df,
-                                        column_name=column_name,
-                                        aa_dict_atchley=aa_dict_atchley,
-                                        padding=padding,
-                                        verbose=verbose)).to("cpu")
+                                       column_name=column_name,
+                                       aa_dict_atchley=aa_dict_atchley,
+                                       padding=padding,
+                                       verbose=verbose)).to("cpu")
         encoded, _, _, _ = model(seq)
     assert encoded.shape[1] == expected
 
 ################
 #  VA
-@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected",[
+
+
+@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected", [
     (test_df, "vaseq", aa_dict_atchley, 100, True, 5)
 ])
 def test_vGdVAEa(df, column_name, aa_dict_atchley, padding, verbose, expected):
     with torch.no_grad():
         model = vGdVAEa()
         seq = torch.Tensor(peptide_map(df=df,
-                                        column_name=column_name,
-                                        aa_dict_atchley=aa_dict_atchley,
-                                        padding=padding,
-                                        verbose=verbose)).to("cpu")
+                                       column_name=column_name,
+                                       aa_dict_atchley=aa_dict_atchley,
+                                       padding=padding,
+                                       verbose=verbose)).to("cpu")
         encoded, _, _, _ = model(seq)
     assert encoded.shape[1] == expected
 
 ################
 #  VB
-@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected",[
+
+
+@pytest.mark.parametrize("df, column_name, aa_dict_atchley, padding, verbose, expected", [
     (test_df, "vbseq", aa_dict_atchley, 100, True, 5)
 ])
 def test_vGdVAEb(df, column_name, aa_dict_atchley, padding, verbose, expected):
     with torch.no_grad():
         model = vGdVAEb()
         seq = torch.Tensor(peptide_map(df=df,
-                                        column_name=column_name,
-                                        aa_dict_atchley=aa_dict_atchley,
-                                        padding=padding,
-                                        verbose=verbose)).to("cpu")
+                                       column_name=column_name,
+                                       aa_dict_atchley=aa_dict_atchley,
+                                       padding=padding,
+                                       verbose=verbose)).to("cpu")
         encoded, _, _, _ = model(seq)
     assert encoded.shape[1] == expected
+
 
 @pytest.mark.parametrize("df, aa_dict_atchley, mhc_dict, verbose, expected", [
     [test_df, aa_dict_atchley, mhc_dict, True, 30]
@@ -104,19 +113,19 @@ def test_vGdVAEb(df, column_name, aa_dict_atchley, padding, verbose, expected):
 def test_pMHC(df, aa_dict_atchley, mhc_dict, verbose, expected):
     with torch.no_grad():
         x_p = torch.Tensor(peptide_map(df=df,
-                                    column_name="peptide",
-                                    aa_dict_atchley=aa_dict_atchley,
-                                    padding=30,
-                                    verbose=verbose)).to("cpu")
+                                       column_name="peptide",
+                                       aa_dict_atchley=aa_dict_atchley,
+                                       padding=30,
+                                       verbose=verbose)).to("cpu")
         x_a = torch.Tensor(mhc_map(df=df,
-                                column_name="mhca",
-                                mhc_dict=mhc_dict,
-                                verbose=verbose)).to("cpu")
+                                   column_name="mhca",
+                                   mhc_dict=mhc_dict,
+                                   verbose=verbose)).to("cpu")
         x_b = torch.Tensor(mhc_map(df=df,
-                                column_name="mhcb",
-                                mhc_dict=mhc_dict,
-                                verbose=verbose)).to("cpu")
-        
+                                   column_name="mhcb",
+                                   mhc_dict=mhc_dict,
+                                   verbose=verbose)).to("cpu")
+
         model = pMHC()
         pmhc_embedding, _ = model(x_p, x_a, x_b)
     assert pmhc_embedding.shape[1] == expected

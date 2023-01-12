@@ -1,9 +1,9 @@
-import pytest 
-import pandas as pd 
-import numpy as np 
-import csv 
-import os 
-from tqdm import tqdm 
+import pytest
+import pandas as pd
+import numpy as np
+import csv
+import os
+from tqdm import tqdm
 
 from pMTnet_Omni.encoders.pmhc_encoder_class import pmhc_encoder_class
 from pMTnet_Omni.encoders.tcr_encoder_class import tcr_encoder_class
@@ -29,13 +29,17 @@ for file_name in tqdm(mhc_files):
 
 test_df = pd.read_csv("./tests/test_data/test_df.csv")
 
+
 @pytest.mark.parametrize("model_device, pMHCcheckpoint_path, df, aa_dict_atchley, mhc_dict, verbose, expected", [
     ("cpu", None, test_df, aa_dict_atchley, mhc_dict, True, 30)
 ])
 def test_pmhc_encoder_class(model_device, pMHCcheckpoint_path, df, aa_dict_atchley, mhc_dict, verbose, expected):
-    encoder = pmhc_encoder_class(model_device=model_device, pMHCcheckpoint_path=pMHCcheckpoint_path)
-    embedding = encoder.encode(df=df, aa_dict_atchley=aa_dict_atchley, mhc_dict=mhc_dict, verbose=verbose)
+    encoder = pmhc_encoder_class(
+        model_device=model_device, pMHCcheckpoint_path=pMHCcheckpoint_path)
+    embedding = encoder.encode(
+        df=df, aa_dict_atchley=aa_dict_atchley, mhc_dict=mhc_dict, verbose=verbose)
     assert embedding.shape[1] == expected
+
 
 test_df1 = pd.DataFrame(np.random.randn(10, 70))
 column_names = ["va" for i in range(5)]
@@ -44,16 +48,18 @@ column_names.extend(["cdr3a" for i in range(30)])
 column_names.extend(["cdr3b" for i in range(30)])
 test_df1.columns = column_names
 
+
 @pytest.mark.parametrize("model_divce, vGdVAEacheckpoint_path, vGdVAEbcheckpoint_path, cdr3VAEacheckpoint_path, cdr3VAEbcheckpoint_path, df, aa_dict_atchley, is_embedding, verbose, expected", [
     ("cpu", None, None, None, None, test_df, aa_dict_atchley, False, True, 70),
     ("cpu", None, None, None, None, test_df1, aa_dict_atchley, True, False, 70)
 ])
-def test_tcr_encoder_class(model_divce, vGdVAEacheckpoint_path, vGdVAEbcheckpoint_path, cdr3VAEacheckpoint_path, cdr3VAEbcheckpoint_path, 
-                            df, aa_dict_atchley, is_embedding, verbose, expected):
-    encoder = tcr_encoder_class(model_device=model_divce, 
+def test_tcr_encoder_class(model_divce, vGdVAEacheckpoint_path, vGdVAEbcheckpoint_path, cdr3VAEacheckpoint_path, cdr3VAEbcheckpoint_path,
+                           df, aa_dict_atchley, is_embedding, verbose, expected):
+    encoder = tcr_encoder_class(model_device=model_divce,
                                 vGdVAEacheckpoint_path=vGdVAEacheckpoint_path,
                                 vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
                                 cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
                                 cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path)
-    embedding = encoder.encode(df=df, aa_dict_atchley=aa_dict_atchley, is_embedding=is_embedding, verbose=verbose)                         
-    assert embedding.shape[1] == expected   
+    embedding = encoder.encode(
+        df=df, aa_dict_atchley=aa_dict_atchley, is_embedding=is_embedding, verbose=verbose)
+    assert embedding.shape[1] == expected
