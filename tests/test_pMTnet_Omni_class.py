@@ -85,7 +85,7 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
     if create_incomplete_data:
         pmtnet.create_incomplete_data()
     pmtnet.get_user_df_output()
-    pmtnet.predict(rank_threshold=0.05, B=1,
+    pmtnet.predict(rank_threshold=1, B=1,
                    load_embedding=True, 
                    replacement=True, 
                    check_size=[5,10], 
