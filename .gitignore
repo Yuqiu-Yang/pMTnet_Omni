@@ -145,3 +145,8 @@ classifier_model_weights/
 
 # ip
 *.ipynb
+
+*.pdf
+
+pmtnet_omni_predict_log.txt
+
