@@ -1,3 +1,4 @@
 sphinx-rtd-theme
 sphinxcontrib-autoprogram
 sphinx-git
+sphinx-autodoc-typehints

@@ -1,5 +1,5 @@
 API: Utilities
 ==============
 
-.. automodule:: pMTnet_Omni.utilities
+.. automodule:: utilities
     :members:

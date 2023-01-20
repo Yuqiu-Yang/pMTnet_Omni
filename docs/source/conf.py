@@ -33,6 +33,7 @@ release = '0.0.1'
 extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
+    'sphinx_autodoc_typehints',
     # View source code 
     'sphinx.ext.viewcode',
     # Check building time

@@ -139,14 +139,10 @@ dmypy.json
 # data file 
 data/
 
-# model weights
-encoder_model_weights/
-classifier_model_weights/
-
 # ip
 *.ipynb
 
 *.pdf
 
 pmtnet_omni_predict_log.txt
-
+test_df_result.csv

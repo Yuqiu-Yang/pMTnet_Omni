@@ -11,7 +11,10 @@ from pMTnet_Omni.utilities import check_column_names, \
     plot_roc_curve, \
     batchify_check_size, \
     partition_dataframe, \
-    setup_seed
+    setup_seed, \
+    path_to_dict, \
+    dict_to_dir, \
+    check_data_dir_structure
 
 
 ##############################################
@@ -240,8 +243,6 @@ def test_partition_dataframe(df, partition_size, expected):
 
 ########################
 # setup_seed
-
-
 @pytest.mark.parametrize("seed", [
     (42)
 ]
@@ -252,3 +253,43 @@ def test_setup_seed(seed):
         assert True
     except:
         assert False
+
+######################
+# path_to_dict
+@pytest.mark.parametrize("path", [
+    ("./tests/test_data")
+])
+def test_path_to_dict(path):
+    d = path_to_dict(path=path, d={'dirs':{}, 'files':set()})
+    assert set(["background_tcrs", "data_for_encoders", "encoder_model_weights", "classifier_model_weights"]).issubset(set(d['dirs'].keys())) and \
+            ("test_df.csv" in d['files'])
+
+# dict_to_dir
+@pytest.mark.parametrize("path", [
+    ("./tests/test_data")
+])
+def test_dict_to_dir(path):
+    d = path_to_dict(path=path, d={'dirs':{}, 'files':set()})
+    try:
+        dict_to_dir(directory_dict=d, pt_file_number_limit=2)
+        assert True
+    except:
+        assert False 
+
+# check_data_dir_structure
+@pytest.mark.parametrize("path", [
+    ("./tests/test_data")
+])
+def test_check_data_dir_structure(path):
+    encoder_path, classifier_path = check_data_dir_structure(path=path)
+    assert all([x is None for x in encoder_path]) and (classifier_path is None)
+
+@pytest.mark.parametrize("path", [
+    ("./tests/")
+])
+def test_check_data_dir_structure_error(path):
+    try:
+        encoder_path, classifier_path = check_data_dir_structure(path=path)
+        assert False
+    except:
+        assert True

@@ -1,5 +1,6 @@
 # Data IO
 import os
+import warnings
 import pandas as pd
 
 # Numeric manipulation
@@ -418,3 +419,138 @@ def setup_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False
+
+
+def dict_to_dir(directory_dict: dict,
+                pt_file_number_limit: int = 2) -> None:
+    """Print out the directory structure given its dictionary representation
+
+    Parameters
+    -----------
+    directory_dict: dict
+        A nested dictionary containing the structure of the directory
+    pt_file_number_limit: int
+        Number of .PT files to be printed 
+
+    """
+    space = '    '
+    branch = '│   '
+    tee = '├── '
+    last = '└── '
+
+    def inner(dir_dict, prefix: str = ''):
+        non_pt_file_list = [x for x in list(
+            dir_dict['files']) if not x.lower().endswith(".pt")]
+        pt_file_list = [x for x in list(
+            dir_dict['files']) if x.lower().endswith(".pt")]
+
+        contents = list(dir_dict['dirs'].keys()) + \
+            non_pt_file_list + pt_file_list[:pt_file_number_limit]
+        n_dirs = len(dir_dict['dirs'].keys())
+        pointers = [tee] * (len(contents) - 1) + [last]
+        dir_counter = 0
+        for pointer, name in zip(pointers, contents):
+            dir_counter += 1
+            if dir_counter <= n_dirs:
+                yield prefix + pointer + name
+                extension = branch if pointer == tee else space
+                yield from inner(dir_dict['dirs'][name], prefix=prefix+extension)
+            else:
+                yield prefix + pointer + name
+
+    iterator = inner(directory_dict)
+    for line in iterator:
+        print(line)
+
+
+def path_to_dict(path: str,
+                 d: dict = {'dirs': {}, 'files': set()}) -> dict:
+    """Turns a directory into its nested dictionary representation
+
+    Parameters
+    ----------
+    path: str
+        The root path of the directory
+    d: dict
+        A dictionary (mainly used during recursion)
+    Returns
+    --------
+    dict
+        A nested dictionary
+
+    """
+    for x in os.listdir(path):
+        if (x.startswith(".")) or (x == '__pycache__'):
+            continue
+        sub_path = os.path.join(path, x)
+        name = os.path.basename(sub_path)
+        if os.path.isdir(sub_path):
+            d['dirs'][name] = {'dirs': {}, 'files': set()}
+            path_to_dict(sub_path, d['dirs'][name])
+        else:
+            d['files'].add(name)
+    return d
+
+
+def check_data_dir_structure(path: str) -> Tuple[list, str]:
+    """Check if the given directory satisfies the requirements for a data directory
+
+    Parameters
+    -----------
+    path: str
+        The root path of the directory
+
+    Returns
+    ---------
+    Tuple[list, str]
+        File paths for encoders and the classifier model
+
+
+    """
+    user_data_dir_dict = path_to_dict(
+        path=path, d={'dirs': {}, 'files': set()})
+    required_dir_structure = {"dirs": {"background_tcrs": {'dirs': {}, 'files': set(["human_alpha.txt",
+                                                                                     "human_alpha_embedding.txt",
+                                                                                    "human_beta.txt",
+                                                                                     "human_beta_embedding.txt",
+                                                                                     "mouse_alpha.txt",
+                                                                                     "mouse_alpha_embedding.txt",
+                                                                                     "mouse_beta.txt",
+                                                                                     "mouse_beta_embedding.txt"])},
+                                       "data_for_encoders": {'dirs': {"mhc_dict": {'dirs': {}, 'files': set([".PT files here"])},
+                                                                      "name_dict": {'dirs': {}, 'files': set([".PT files here"])}},
+                                                             'files': set(['Atchley_factors.csv', 'valid_mhc.txt'])},
+                                       "encoder_model_weights": {'dirs': {}, 'files': set(["v_alpha_encoder.pth",
+                                                                                           "v_beta_encoder.pth",
+                                                                                          "cdr3_alpha_encoder.pth",
+                                                                                           "cdr3_beta_encoder.pth",
+                                                                                           "pmhc_encoder.pth"])},
+                                       "classifier_model_weights": {'dirs': {}, 'files': set(["classifier.pth"])}},
+                              "files": set()}
+    if (not set(required_dir_structure['dirs'].keys()).issubset(set(user_data_dir_dict['dirs'].keys()))) or \
+        (not required_dir_structure['dirs']['background_tcrs']['files'].issubset(user_data_dir_dict['dirs']['background_tcrs']['files'])) or \
+        (not set(required_dir_structure['dirs']['data_for_encoders']['dirs'].keys()).issubset(set(user_data_dir_dict['dirs']['data_for_encoders']['dirs'].keys()))) or \
+        (not required_dir_structure['dirs']['data_for_encoders']['files'].issubset(user_data_dir_dict['dirs']['data_for_encoders']['files'])):
+        dict_to_dir(required_dir_structure, pt_file_number_limit=2)
+        raise Exception("See above for the required directory structure.\n")
+
+    encoder_path = []
+    for m in ["v_alpha_encoder.pth",
+              "v_beta_encoder.pth",
+              "cdr3_alpha_encoder.pth",
+              "cdr3_beta_encoder.pth",
+              "pmhc_encoder.pth"]:
+        if m not in user_data_dir_dict['dirs']['encoder_model_weights']['files']:
+            warnings.warn(m + " can not be found. Will use random weights.\n")
+            encoder_path.append(None)
+        else:
+            encoder_path.append(os.path.join(path, "encoder_model_weights", m))
+
+    if "classifier.pth" not in user_data_dir_dict['dirs']['classifier_model_weights']['files']:
+        warnings.warn("classifier.pth" +
+                      " can not be found. Will use random weights.\n")
+        classifier_path = None
+    else:
+        classifier_path = os.path.join(
+            path, "classifier_model_weights/classifier.pth")
+    return encoder_path, classifier_path

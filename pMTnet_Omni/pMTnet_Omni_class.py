@@ -23,20 +23,13 @@ from typing import Optional, Tuple, Union
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.classifier import pMHCTCR
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
-from pMTnet_Omni.utilities import read_file, get_auroc, plot_roc_curve, batchify_check_size, setup_seed, partition_dataframe
+from pMTnet_Omni.utilities import read_file, get_auroc, plot_roc_curve, batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
 
 
 class pMTnet_Omni_class:
     def __init__(self,
-                 model_device: str = 'cpu',
-                 background_data_dir: str = "./data/background_tcrs/",
-                 encoder_data_dir='./data/data_for_encoders/',
-                 classifier_checkpoint_path: Optional[str] = None,
-                 vGdVAEacheckpoint_path: Optional[str] = None,
-                 vGdVAEbcheckpoint_path: Optional[str] = None,
-                 cdr3VAEacheckpoint_path: Optional[str] = None,
-                 cdr3VAEbcheckpoint_path: Optional[str] = None,
-                 pMHCcheckpoint_path: Optional[str] = None,
+                 model_device: Optional[str] = None,
+                 data_dir: str = "./data/",
                  seed: Optional[int] = None) -> None:
         """Initialize pMTnet_Omni_class object
 
@@ -44,30 +37,21 @@ class pMTnet_Omni_class:
         ---------
         model_device: str
             The device to use. Typically it would be cpu or cuda:0
-        background_data_dir: str
-            The directory containing background tcr data 
-        encoder_data_dir: str
-            The directory containing data to be used by encoders 
-        classifier_checkpoint_path: Optional[str]
-            The path to the classifier model checkpoint 
-        vGdVAEacheckpoint_path: Optional[str]
-            The path to the v_alpha encoder model checkpoint
-        vGdVAEbcheckpoint_path: Optional[str]
-            The path to the v_beta encoder model checkpoint
-        cdr3VAEacheckpoint_path: Optional[str]
-            The path to the cdr3_alpha encoder model checkpoint
-        cdr3VAEbcheckpoint_path: Optional[str]
-            The path to the cdr3_beta encoder model checkpoint
-        pMHCcheckpoint_path: Optional[str]
-            The path to the pMHC encoder model checkpoint
+        data_dir: str
+            The directory containing data needed for model setups
         seed: Optional[int]
             The seed to be used 
 
         """
-
+        # Set model device 
+        if model_device is None:
+            model_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.model_device = model_device
-        self.background_data_dir = background_data_dir
-        self.encoder_data_dir = encoder_data_dir
+
+        encoder_path, classifier_path = check_data_dir_structure(data_dir)
+
+        self.background_data_dir = os.path.join(data_dir, "background_tcrs/") 
+        self.encoder_data_dir = os.path.join(data_dir, "data_for_encoders/")
         # Set seed
         if seed is not None:
             setup_seed(seed=seed)
@@ -83,7 +67,14 @@ class pMTnet_Omni_class:
         self.user_pmhc_embedding_dict = {"complete": {}}
 
         # Create the encoder
-        self.encoder = encoder_class(encoder_data_dir=encoder_data_dir,
+        
+        vGdVAEacheckpoint_path = encoder_path[0]
+        vGdVAEbcheckpoint_path = encoder_path[1]
+        cdr3VAEacheckpoint_path = encoder_path[2]
+        cdr3VAEbcheckpoint_path = encoder_path[3]
+        pMHCcheckpoint_path = encoder_path[4]
+
+        self.encoder = encoder_class(encoder_data_dir=self.encoder_data_dir,
                                      model_device=model_device,
                                      vGdVAEacheckpoint_path=vGdVAEacheckpoint_path,
                                      vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
@@ -93,6 +84,8 @@ class pMTnet_Omni_class:
 
         # Initialize th clssifier model
         self.classifier_model = pMHCTCR().to(model_device)
+        classifier_checkpoint_path = classifier_path
+
         # Load the model
         print("Attempt to load the classifier model\n")
         if classifier_checkpoint_path is not None:
@@ -268,7 +261,7 @@ class pMTnet_Omni_class:
                 check_size: list = [1000, 10000, 100000],
                 load_size: int = 1000000,
                 minibatch_size: int = 50000,
-                log_file_path: str = "./pmtnet_omni_predict_log.txt") -> None:
+                log_file_path: Optional[str] = None) -> None:
         """Compute the rank percentiles 
 
         Parameters
@@ -287,10 +280,16 @@ class pMTnet_Omni_class:
             The number of background tcrs to be loaded by the dataloaders 
         minibatch_size: int
             The number of background tcrs to be sampled each time a dataloader is called
-        log_file_path: str
+        log_file_path: Optional[str]
             The file path to save the output log file
 
         """
+        if log_file_path is None:
+            log_file_path = os.devnull
+            print("Log file will NOT be saved as no path is specified.\n") 
+        elif os.path.splitext(log_file_path)[1] != ".txt":
+            raise Exception("Only .txt file is used for the log file.\n")
+        
         with open(log_file_path, 'w') as f:
             with redirect_stdout(f):
                 # Make sure check size is in an ascending order
@@ -371,17 +370,33 @@ class pMTnet_Omni_class:
                                         b_size_so_far = 0
                                         check_size_ind += 1
 
-    def _unpartition(self) -> pd.DataFrame:
+    def amalgamate(self) -> Tuple[dict, dict, dict]:
         df_dict = {}
+        tcr_dict = {}
+        pmhc_dict = {}
         for missingness in self.user_df_dict:
             if len(self.user_df_dict[missingness]) == 0:
                 df_dict[missingness] = {}
+                tcr_dict[missingness] = {}
+                pmhc_dict[missingness] = {}
                 continue
+            # DF
             df = [self.user_df_dict[missingness][partition]
                   for partition in self.user_df_dict[missingness]]
             df = pd.concat(df, axis=0, ignore_index=True)
             df_dict[missingness] = df
-        return df_dict
+            # TCRS
+            tcrs = [self.user_tcr_embedding_dict[missingness][partition] for partition in self.user_tcr_embedding_dict[missingness]]
+            tcrs = torch.cat(tcrs, dim=0)
+            tcr_dict[missingness] = tcrs
+            # pMHC
+            # We propagate across missingness as we assume users use this function for 
+            # validation, visulation, etc
+            pmhcs = [self.user_pmhc_embedding_dict['complete'][partition] for partition in self.user_pmhc_embedding_dict['complete']]
+            pmhcs = torch.cat(pmhcs, dim=0)
+            pmhc_dict[missingness] = pmhcs
+
+        return df_dict, tcr_dict, pmhc_dict
 
     def validate(self,
                  true_labels: Union[pd.DataFrame, np.ndarray, list],
@@ -415,7 +430,7 @@ class pMTnet_Omni_class:
             # We assume that true_labels is a one-column dataframe
             true_labels = true_labels.iloc[:, 0]
         truth = pd.DataFrame({'true_label': true_labels})
-        df_dict = self._unpartition()
+        df_dict, _, _ = self.amalgamate()
         pp = PdfPages(roc_plot_path)
         for missingness in self.user_df_dict:
             if len(self.user_df_dict[missingness]) == 0:
