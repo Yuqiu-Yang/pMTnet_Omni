@@ -43,8 +43,6 @@ Quick (but sloppy) Installation
 .. note:: 
    This will install *pMTnet_Omni* to your `base` environment. 
    For a more in-depth instruction, check out our :doc:`installation_guide`. 
-   Specifically, :ref:`this section <installation guide>`.
-
 
 Conda install
 
