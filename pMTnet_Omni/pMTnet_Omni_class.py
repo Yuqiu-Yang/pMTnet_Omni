@@ -46,7 +46,8 @@ class pMTnet_Omni_class:
         # Set model device 
         if model_device is None:
             model_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.model_device = model_device
+        else: 
+            self.model_device = torch.device(model_device)
 
         encoder_path, classifier_path = check_data_dir_structure(data_dir)
 
@@ -256,7 +257,7 @@ class pMTnet_Omni_class:
     def predict(self,
                 rank_threshold: float = 0.03,
                 B: int = 1,
-                load_embedding: bool = False,
+                load_embedding: bool = True,
                 replacement: bool = True,
                 check_size: list = [1000, 10000, 100000],
                 load_size: int = 1000000,

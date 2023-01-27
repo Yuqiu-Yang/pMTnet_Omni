@@ -1,17 +1,23 @@
-# pMTnet Omni :microscope:
-An advanced deep learning  algorithm for TCR and pMHC binding prediction. 
+# pMTnet Omni: your one-stop TCR-pMHC affinity prediction algorithm :microscope:
 
-This is the prototype: [pMTnet](https://github.com/tianshilu/pMTnet)
+![Logo](/assets/logo.png)
 
-Check out our [online document](https://tao-wang-pmtnet-omni.readthedocs.io/en/latest/)
+[![forthebadge]](/assets/tcr-pmhc.svg)
+[![forthebadge]](/assets/deep-learning.svg)
+[![codecov](https://codecov.io/gh/Yuqiu-Yang/pMTnet_Omni/branch/main/graph/badge.svg?token=L59TPMM3VN)](https://codecov.io/gh/Yuqiu-Yang/pMTnet_Omni)
 
-Apart from the working model, for this repo we want to achieve the following:
+<b>pMTnet Omni</b> is a deep learning algorithm for affinity prediction based on TCR Va, Vb, CDR3a, CDR3b sequences, peptide sequence, and MHC allele types. The predictions can be made for human and mouse alleles, and for both CD8 T cells/MHC class I and CD4 T cells/MHC class II.
 
-- [x] Online document (readthedocs.io) (autodoc for api)
-- [ ] Unit tests (code coverage + badges)
-- [ ] Command line interface 
-- [ ] Github workflow 
-- [ ] Publish on conda (conda-forge) and PyPI
-	- Currently, we will use requirements.txt + setup.py
-	- In the future, we will move to pyproject.toml + setup.cfg
+Please refer to our paper for more details: [pMTnet Omni paper link here](www.google.com)
+
+We host the supporting data as well the online tool [here](http://lce-test.biohpc.swmed.edu/pmtnet), where you can find all the members of the pMTnet 
+family, including [pMTnet V1](https://github.com/tianshilu/pMTnet).
+
+
+![Model Overview](/docs/source/images/overview.png)
+
+
+
+
+
 

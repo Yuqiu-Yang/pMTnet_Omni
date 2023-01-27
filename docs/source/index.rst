@@ -6,43 +6,61 @@
 .. image:: ../../assets/logo.png
    :width: 600
 
-pMTnet Omni: your one-stop pMHC-TCR binding prediction algorithm
-=======================================
-.. note::
-   The logo image is from Dr. Tao Wang's twitter
+**pMTnet Omni**: your one-stop TCR-pMHC affinity prediction algorithm
+===========================================================================
 
-**pMTnet Omni** is a deep learning algorithm for predicting the binding 
-properties of any pair of pMHC (peptide-major histocompatibility complex) 
-and TCR (T-cells receptor)
+**pMTnet Omni** is a deep learning algorithm for affinity prediction based on 
+TCR Va, Vb, CDR3a, CDR3b sequences, peptide sequence, and MHC allele types.
+The predictions can be made for human and mouse alleles, 
+and for both CD8 T cells/MHC class I and CD4 T cells/MHC class II.
 
-The details of the models can be found in `our paper <https://www.google.com>`_
+Here is a quick overview of the structure of the model:
 
-The software can be found `on github <https://www.google.com>`_
+.. image:: ./images/overview.png
+   :width: 600
 
-We also host the algorithm `here <https://www.google.com>`_
+For a more detailed exploration of our model, please refer to `our paper <https://www.google.com>`_:
 
-.. note::
-   This project and this document are under active development
+*pMTnet Omni Paper citation here*
 
-**Installation**
-.. note::
-   This will install the package in your `base` environment which in general
-   is a bad practice. 
-   
-For a more in-depth instruction, check out our :doc:`installation_guide`. 
-Specifically, :ref:`this section <installation guide>`.
+Our GitHub repo can be found `here <https://github.com/Yuqiu-Yang/pMTnet_Omni>`_
+
+The supporting data as well as the online tool are hosted here `here <http://lce-test.biohpc.swmed.edu/pmtnet>`_
+
+Dependencies
+--------------
+
+* numpy==1.22.4
+* pandas==1.5.2
+* matplotlib==3.6.2
+* scikit-learn==1.0.2
+* tqdm==4.64.1
+* torch==1.13.1
+
+Quick (but sloppy) Installation
+--------------------------------
+
+.. note:: 
+   This will install *pMTnet_Omni* to your `base` environment. 
+   For a more in-depth instruction, check out our :doc:`installation_guide`. 
+   Specifically, :ref:`this section <installation guide>`.
+
 
 Conda install
 
-.. code-block:: console
-   conda install 
+.. code:: bash
+   
+   conda install pMTnet_Omni
 
 PyPI install
 
-.. code-block:: console
-   pip istall 
+.. code:: bash
+   
+   pip install pMTnet_Omni
 
 
+User Guide / Tutorial
+=====================
 .. toctree::
    :maxdepth: 1
    :caption: Get Started
@@ -55,19 +73,13 @@ PyPI install
    :caption: Guided Tutorial
 
    tutorial/input_file
-   tutorial/load_models
+   tutorial/details
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: API Reference
 
    api_reference/index
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Change Log
-
-   change_log/index
 
 Indices and tables
 ==================
