@@ -144,5 +144,9 @@ data/
 
 *.pdf
 
+# build 
+dist/
+dist_conda/
+meta.yaml
 pmtnet_omni_predict_log.txt
 test_df_result.csv

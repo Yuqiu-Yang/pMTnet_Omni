@@ -1,3 +1,31 @@
+"""The Command-Line Interface (CLI) of pMTnet Omni
+
+The CLI of pMTnet Omni can be accessed via ``python -m pMTnet_Omni``.
+
+:Example:
+
+    Get help:
+    
+    .. code-block:: bash
+
+        python -m pMTnet_Omni -h
+    
+    Check version and authors:
+    
+    .. code-block:: bash
+    
+        python -m pMTnet_Omni --version 
+        python -m pMTnet_Omni --author
+
+**Pros**
+    * Shallow learning curve
+    
+**Cons**
+    * Fewer configurations 
+    * No inspections of intermediate results
+"""
+
+
 import os
 import sys
 import torch
