@@ -44,14 +44,6 @@ Quick (but sloppy) Installation
    This will install *pMTnet_Omni* to your `base` environment. 
    For a more in-depth instruction, check out our :doc:`installation_guide`. 
 
-Conda install
-
-.. code:: bash
-   
-   conda install pMTnet_Omni
-
-PyPI install
-
 .. code:: bash
    
    pip install pMTnet_Omni

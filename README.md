@@ -33,16 +33,10 @@ We have also built a detailed [online documentation](https://tao-wang-pmtnet-omn
 conda env create -f pMTnet_Omni_env.yml
 ```
 
-## Installation (Coming right up (not run now))
-<b>PyPi</b>
+## Installation 
 ```shell
 conda activate pMTnet_Omni
 pip install pMTnet_Omni
-```
-<b>Conda</b>
-```shell
-conda activate pMTnet_Omni
-conda install pMTnet_Omni
 ```
 
 ## Quick Start Guide 

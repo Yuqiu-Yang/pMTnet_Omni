@@ -34,15 +34,7 @@ This will create a conda environment *pMTnet_Omni*
 
 Package Installation
 --------------
-Conda install
-~~~~~~~~~~~~~~
-.. code:: bash
 
-   conda activate pMTnet_Omni
-   conda install pMTnet_Omni
-
-PyPI install
-~~~~~~~~~~~~~
 .. code:: bash
 
    conda activate pMTnet_Omni
