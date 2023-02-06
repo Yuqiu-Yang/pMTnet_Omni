@@ -5,7 +5,7 @@ amino acids are
 
 .. list-table:: Columns of Amino Acids (AA) Sequences
    :align: center 
-   :widths: 50 50 
+   :widths: 30 70 
    :header-rows: 1
 
    * - Name 
@@ -33,9 +33,28 @@ accepted by **pMTnet Omni**.
    :width: 600 
 
 .. warning:: 
-   If a letter in a provided sequence is not of the 20 amino acids 
+   If a letter in a provided sequence is not of the 20 amino acids
+   (this includes cases such as actual letters\: ``X``, 
+   white spaces\: :literal:`\ `, special characters\: ``_, +, /`` etc.),  
    it will first be replaced by ``_``. When converting to a matrix of 
    Atchley Factors, those ``_`` will be interpreted as ``0,0,0,0,0``.
+
+vaseq vbseq 
+---------------
+
+
+
+cdr3a cdr3b 
+---------------
+
+
+peptide 
+----------------
+
+
+mhcseq 
+----------------
+
 
 
 
