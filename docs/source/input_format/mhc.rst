@@ -1,3 +1,3 @@
-Human HLA Format
+MHC Format
 ===================
 

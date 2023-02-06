@@ -125,8 +125,6 @@ conventions into consideration.
 In this section, the required format for all fields in the user 
 input will be elaborated upon. 
 
-#. All incomplete data will be dropped 
-#. Make sure the sequences in the `peptide` column contain **less than** 30 amino acids
 #. All MHCs have their corresponding ESM embeddings
 
 .. toctree::
@@ -143,13 +141,8 @@ input will be elaborated upon.
    
 .. toctree::
    :maxdepth: 1
-   :caption: Human HLA
+   :caption: MHC
    
-   human_hla
+   mhc
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Mouse MHC
-
-   mouse_mhc
 

@@ -41,16 +41,31 @@ accepted by **pMTnet Omni**.
 
 vaseq vbseq 
 ---------------
+When making affinity predictions, **pMTnet Omni** actually uses values contained in 
+these two columns instead of their names contained in ``va`` and ``vb`` columns.
 
+.. note:: 
+    If only ``va`` (resp. ``vb``) is provided, we will perform a 
+    look-up using our `reference database` provided `here <http://lce-test.biohpc.swmed.edu/pmtnet>`_. 
+    However, 
+
+
+Therefore, it's vital to make sure that your input sequences 
 
 
 cdr3a cdr3b 
 ---------------
-
+.. warning:: 
+    CDR3s usually start from C and end with F. 
+    We are aware of different definitions of CDR3s that result 
+    in slightly different start and end boundaries of CDR3s. 
+    Please use the definition that is consistent with ours
 
 peptide 
 ----------------
-
+.. warning:: 
+   Any AA sequence in the ``peptide`` column that contains 
+   **more than** 30 amino acids will be dropped.
 
 mhcseq 
 ----------------

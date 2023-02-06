@@ -27,6 +27,7 @@ We have also built a detailed [online documentation](https://tao-wang-pmtnet-omn
 - scikit-learn==1.0.2
 - tqdm==4.64.1
 - torch==1.13.1
+- fair-esm==2.0.0
 
 ## Enviroment Setup
 ```shell
