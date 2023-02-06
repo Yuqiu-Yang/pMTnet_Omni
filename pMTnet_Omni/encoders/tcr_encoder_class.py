@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 # Typing
-from typing import Optional
+from typing import Optional, Union
 
 # Utilities and models
 from pMTnet_Omni.encoders.v_alpha_encoder_model import vGdVAEa
@@ -18,7 +18,7 @@ from pMTnet_Omni.encoders.utilities import peptide_map
 
 class tcr_encoder_class:
     def __init__(self,
-                 model_device: str,
+                 model_device: Union[str, torch.device],
                  vGdVAEacheckpoint_path: Optional[str] = None,
                  vGdVAEbcheckpoint_path: Optional[str] = None,
                  cdr3VAEacheckpoint_path: Optional[str] = None,
@@ -27,7 +27,7 @@ class tcr_encoder_class:
 
         Parameters
         ---------
-        model_device: str
+        model_device: Union[str, torch.device]
             cpu or gpu
         vGdVAEacheckpoint_path: Optional[str]
             The path to VA the encoder
@@ -40,6 +40,8 @@ class tcr_encoder_class:
 
         
         """
+        if isinstance(model_device, str):
+            model_device = torch.device(model_device)
         self.model_device = model_device
 
         # Initialize the models

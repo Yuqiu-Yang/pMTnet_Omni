@@ -5,6 +5,7 @@ from copy import deepcopy
 
 # Numeric manipulation
 import numpy as np
+from sklearn import metrics
 
 # PyTorch
 import torch
@@ -14,7 +15,7 @@ from tqdm import tqdm
 # For recording model output log
 from contextlib import redirect_stdout
 # For saving roc curves in a pdf file
-from matplotlib.backends.backend_pdf import PdfPages
+# from matplotlib.backends.backend_pdf import PdfPages
 
 # Typing
 from typing import Optional, Tuple, Union
@@ -23,19 +24,19 @@ from typing import Optional, Tuple, Union
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.classifier import pMHCTCR
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
-from pMTnet_Omni.utilities import read_file, get_auroc, plot_roc_curve, batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
+from pMTnet_Omni.utilities import read_file, batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
 
 
 class pMTnet_Omni_class:
     def __init__(self,
-                 model_device: Optional[str] = None,
+                 model_device: Optional[Union[str, torch.device]] = None,
                  data_dir: str = "./data/",
                  seed: Optional[int] = None) -> None:
         """Initialize pMTnet_Omni_class object
 
         Parameters
         ---------
-        model_device: str
+        model_device: Optional[Union[str, torch.device]]
             The device to use. Typically it would be cpu or cuda:0
         data_dir: str
             The directory containing data needed for model setups
@@ -43,15 +44,18 @@ class pMTnet_Omni_class:
             The seed to be used 
 
         """
-        # Set model device 
+        # Set model device
         if model_device is None:
-            model_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        else: 
+            self.model_device = torch.device(
+                'cuda:0' if torch.cuda.is_available() else 'cpu')
+        elif isinstance(model_device, str):
             self.model_device = torch.device(model_device)
-
+        else:
+            self.model_device = torch.device(model_device)
+        
         encoder_path, classifier_path = check_data_dir_structure(data_dir)
 
-        self.background_data_dir = os.path.join(data_dir, "background_tcrs/") 
+        self.background_data_dir = os.path.join(data_dir, "background_tcrs/")
         self.encoder_data_dir = os.path.join(data_dir, "data_for_encoders/")
         # Set seed
         if seed is not None:
@@ -68,7 +72,7 @@ class pMTnet_Omni_class:
         self.user_pmhc_embedding_dict = {"complete": {}}
 
         # Create the encoder
-        
+
         vGdVAEacheckpoint_path = encoder_path[0]
         vGdVAEbcheckpoint_path = encoder_path[1]
         cdr3VAEacheckpoint_path = encoder_path[2]
@@ -76,7 +80,7 @@ class pMTnet_Omni_class:
         pMHCcheckpoint_path = encoder_path[4]
 
         self.encoder = encoder_class(encoder_data_dir=self.encoder_data_dir,
-                                     model_device=model_device,
+                                     model_device=self.model_device,
                                      vGdVAEacheckpoint_path=vGdVAEacheckpoint_path,
                                      vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
                                      cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
@@ -84,14 +88,14 @@ class pMTnet_Omni_class:
                                      pMHCcheckpoint_path=pMHCcheckpoint_path)
 
         # Initialize th clssifier model
-        self.classifier_model = pMHCTCR().to(model_device)
+        self.classifier_model = pMHCTCR().to(self.model_device)
         classifier_checkpoint_path = classifier_path
 
         # Load the model
         print("Attempt to load the classifier model\n")
         if classifier_checkpoint_path is not None:
             classifier_checkpoint = torch.load(
-                classifier_checkpoint_path, map_location=model_device)
+                classifier_checkpoint_path, map_location=self.model_device)
             self.classifier_model.load_state_dict(classifier_checkpoint['net'])
             print("Success\n")
         else:
@@ -101,7 +105,7 @@ class pMTnet_Omni_class:
                      user_data_path: str,
                      sep: str = ",",
                      header: int = 0,
-                     partition_size=7000) -> None:
+                     partition_size=500) -> None:
         """Read in user dataframe
 
         Parameters
@@ -118,14 +122,14 @@ class pMTnet_Omni_class:
         user_df = read_file(file_path=user_data_path,
                             sep=sep,
                             header=header,
-                            background_tcr_dir=self.encoder_data_dir,
+                            background_tcr_dir=self.background_data_dir,
                             mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"))
         user_df['logit'] = np.inf
         self.user_df_dict['complete'] = partition_dataframe(
             df=user_df, partition_size=partition_size)
 
-    def encode_user_df(self,
-                       verbose: bool = True) -> None:
+    def _encode_user_df(self,
+                        verbose: bool = True) -> None:
         """Encode pMHC and TCRs provided in the user dataframe 
 
         Parameters
@@ -143,8 +147,9 @@ class pMTnet_Omni_class:
             self.user_pmhc_embedding_dict['complete'][partition] = pmhc_embedding.to(
                 'cpu')
 
-    def create_incomplete_data(self) -> None:
+    def _create_incomplete_data(self) -> None:
         """Create incomplete data based on the user dataframe 
+
         This function is only supposed to be used during validation.
         The function will duplicate the original dataframe twice. 
         For the first duplicate, all tcr information on the alpha chain will be removed.
@@ -186,8 +191,9 @@ class pMTnet_Omni_class:
             tcr_embedding_beta_missing[:, 40:70] = 0
             self.user_tcr_embedding_dict['beta missing'][partition] = tcr_embedding_beta_missing
 
-    def get_user_df_output(self) -> None:
+    def _get_user_df_output(self) -> None:
         """Predict using the dataframe
+
         Use the classifier model to produce logits of records in the dataframe 
 
         """
@@ -254,21 +260,21 @@ class pMTnet_Omni_class:
                                                                               replacement=replacement)
         return batch_size, batch_finished_indicator, background_human_dataloader, background_mouse_dataloader
 
-    def predict(self,
-                rank_threshold: float = 0.03,
-                B: int = 1,
-                load_embedding: bool = True,
-                replacement: bool = True,
-                check_size: list = [1000, 10000, 100000],
-                load_size: int = 1000000,
-                minibatch_size: int = 50000,
-                log_file_path: Optional[str] = None) -> None:
+    def _compute_percentile_rank(self,
+                                 rank_threshold: float = 0.03,
+                                 B: int = 1,
+                                 load_embedding: bool = True,
+                                 replacement: bool = True,
+                                 check_size: list = [1000, 10000, 100000],
+                                 load_size: int = 1000000,
+                                 minibatch_size: int = 50000,
+                                 log_file_path: Optional[str] = None) -> None:
         """Compute the rank percentiles 
 
         Parameters
         ----------
         rank_threshold: float
-            The rank percentile threshold greater than which further varification is NOT conducted 
+            The rank percentile threshold greater than which further verification is NOT conducted 
         B: int 
             Number of trials 
         load_embedding: bool
@@ -287,10 +293,10 @@ class pMTnet_Omni_class:
         """
         if log_file_path is None:
             log_file_path = os.devnull
-            print("Log file will NOT be saved as no path is specified.\n") 
+            print("Log file will NOT be saved as no path is specified.\n")
         elif os.path.splitext(log_file_path)[1] != ".txt":
             raise Exception("Only .txt file is used for the log file.\n")
-        
+
         with open(log_file_path, 'w') as f:
             with redirect_stdout(f):
                 # Make sure check size is in an ascending order
@@ -309,7 +315,7 @@ class pMTnet_Omni_class:
                             continue
                         for partition in self.user_df_dict[missingness]:
                             n_rows = self.user_df_dict[missingness][partition].shape[0]
-                            self.user_df_dict[missingness][partition]["rank_" +
+                            self.user_df_dict[missingness][partition]["percentile_rank_" +
                                                                       str(b)] = np.inf
                             tcr_species_df = self.user_df_dict[missingness][partition]["tcr_species"].to_frame(
                             )
@@ -364,14 +370,19 @@ class pMTnet_Omni_class:
                                             # If the threshold is 0.03 and the rank_percentile
                                             # is greater than that, this means that more than
                                             # 3% of the background is 'better'
-                                            self.user_df_dict[missingness][partition].at[row, 'rank_'+str(
+                                            self.user_df_dict[missingness][partition].at[row, 'percentile_rank_'+str(
                                                 b)] = rank_percentile
                                             break
                                         user_output_position = 0
                                         b_size_so_far = 0
                                         check_size_ind += 1
 
-    def amalgamate(self) -> Tuple[dict, dict, dict]:
+    def _amalgamate(self) -> Tuple[dict, dict, dict]:
+        """Amalgamate all the partitions 
+
+        This function will ``glue" all the partitions back together. This mainly used 
+        for outputting our model results 
+        """
         df_dict = {}
         tcr_dict = {}
         pmhc_dict = {}
@@ -387,43 +398,107 @@ class pMTnet_Omni_class:
             df = pd.concat(df, axis=0, ignore_index=True)
             df_dict[missingness] = df
             # TCRS
-            tcrs = [self.user_tcr_embedding_dict[missingness][partition] for partition in self.user_tcr_embedding_dict[missingness]]
+            tcrs = [self.user_tcr_embedding_dict[missingness][partition]
+                    for partition in self.user_tcr_embedding_dict[missingness]]
             tcrs = torch.cat(tcrs, dim=0)
             tcr_dict[missingness] = tcrs
             # pMHC
-            # We propagate across missingness as we assume users use this function for 
+            # We propagate across missingness as we assume users use this function for
             # validation, visulation, etc
-            pmhcs = [self.user_pmhc_embedding_dict['complete'][partition] for partition in self.user_pmhc_embedding_dict['complete']]
+            pmhcs = [self.user_pmhc_embedding_dict['complete'][partition]
+                     for partition in self.user_pmhc_embedding_dict['complete']]
             pmhcs = torch.cat(pmhcs, dim=0)
             pmhc_dict[missingness] = pmhcs
 
         return df_dict, tcr_dict, pmhc_dict
 
+    def predict(self,
+                verbose: bool = True,
+                create_incomplete_data: bool = False,
+                compute_percentile_rank: bool = True,
+                output_file_path: Optional[str] = None,
+                rank_threshold: float = 0.03,
+                B: int = 1,
+                load_embedding: bool = True,
+                replacement: bool = True,
+                check_size: list = [1000, 10000, 100000],
+                load_size: int = 1000000,
+                minibatch_size: int = 50000,
+                log_file_path: Optional[str] = None) -> None:
+        """Predict TCR-pMHC affinity
+
+        Parameters
+        ----------
+        verbose: bool
+            Whether or not to print out model process 
+        create_incomplete_data: bool
+            Whether or not to create alpha missing and beta missing data. True only when doing validation 
+        compute_percentile_rank: bool
+            Whether or not to compute percentile ranks. If False, then only logits will be computed 
+        output_file_path: Optional[str]
+            The path the output file. ONLY .csv file is supported 
+        rank_threshold: float
+            The rank percentile threshold greater than which further verification is NOT conducted 
+        B: int 
+            Number of trials 
+        load_embedding: bool
+            Whether or not to load embeddings of the background tcrs 
+        replacement: bool
+            Whether or not to sample with replacement
+        check_size: list 
+            The numbers of background tcrs to be used to check against the user results 
+        load_size: int 
+            The number of background tcrs to be loaded by the dataloaders 
+        minibatch_size: int
+            The number of background tcrs to be sampled each time a dataloader is called
+        log_file_path: Optional[str]
+            The file path to save the output log file
+
+        """
+
+        self._encode_user_df(verbose=verbose)
+        if create_incomplete_data:
+            self._create_incomplete_data()
+        self._get_user_df_output()
+        if compute_percentile_rank:
+            self._compute_percentile_rank(rank_threshold=rank_threshold,
+                                          B=B,
+                                          load_embedding=load_embedding,
+                                          replacement=replacement,
+                                          check_size=check_size,
+                                          load_size=load_size,
+                                          minibatch_size=minibatch_size,
+                                          log_file_path=log_file_path)
+        if output_file_path is not None:
+            filename, _ = os.path.splitext(output_file_path)
+            df_dict, _, _ = self._amalgamate()
+            for missingness in self.user_df_dict:
+                if len(self.user_df_dict[missingness]) == 0:
+                    continue
+                df_dict[missingness].to_csv(filename+'_'+missingness+'.csv',
+                                            index=False, header=True, sep=',')
+
     def validate(self,
                  true_labels: Union[pd.DataFrame, np.ndarray, list],
-                 roc_plot_path: str = "./roc_plots.pdf",
-                 b: int = 0) -> dict:
+                 b: int = 0,
+                 ndigits: int = 3) -> dict:
         """Compute aurocs and plot roc curves 
 
         Parameters
         ----------
         true_labels: Union[pd.DataFrame, np.ndarray, list]
             A one column pandas dataframe containing the true labels. We assume 1 is binding and 0 is not binding
-        roc_plot_path: str
-            The file path to save the roc curves 
+        b: int
+            The trial number to validate
+        ndigits: int
+            The number of digits in aucs to keep 
 
         Returns
         ---------
         dict: 
-            A dictionary containing the aurocs and their breakdowns 
+            A dictionary containing the aucs and their breakdowns 
 
         """
-        result_dfs = {key: None for key in self.user_df_dict}
-
-        # For each missingness type, we also compute different auroc types
-        auroc_to_compute = ["overall", "human overall", "mouse overall",
-                            "human class i", "human class ii",
-                            "mouse class i", "mouse class ii"]
 
         if isinstance(true_labels, list) or isinstance(true_labels, np.ndarray):
             true_labels = np.array(true_labels)
@@ -431,8 +506,25 @@ class pMTnet_Omni_class:
             # We assume that true_labels is a one-column dataframe
             true_labels = true_labels.iloc[:, 0]
         truth = pd.DataFrame({'true_label': true_labels})
-        df_dict, _, _ = self.amalgamate()
-        pp = PdfPages(roc_plot_path)
+        df_dict, _, _ = self._amalgamate()
+
+        # The result will be a nested dictionary
+        # {"complete": {"overall": {"fpr": np.ndarray,
+        #                           "tpr": np.ndarray,
+        #                           "precision": np.ndarray,
+        #                           "recall": np.ndarray,
+        #                           "auroc": float,
+        #                           "auprc": float},
+        #               "human overall": {}},
+        #  "alpha missing": {},
+        #  "beta missing": {}}
+        result_dicts = {key: None for key in self.user_df_dict}
+
+        # For each missingness type, we also compute different auc types
+        auc_to_compute = ["overall", "human overall", "mouse overall",
+                          "human class i", "human class ii",
+                          "mouse class i", "mouse class ii"]
+
         for missingness in self.user_df_dict:
             if len(self.user_df_dict[missingness]) == 0:
                 continue
@@ -443,15 +535,21 @@ class pMTnet_Omni_class:
             # the more likely the model thinks the pairs will bind
             # As a 1 in the true labels means binding
             # we need to flip the percentiles
-            pred = (1-df_dict[missingness]['rank_'+str(b)]).to_frame()
+            pred = (1-df_dict[missingness]
+                    ['percentile_rank_'+str(b)]).to_frame()
 
             # Then we concatenate truth, predicted and mhc_class into one dataframe
             df = pd.concat([truth, pred.set_index(truth.index),
                            mhc_class.set_index(truth.index)], axis=1)
 
-            auc_dict = {key: [None] for key in auroc_to_compute}
+            # auc_dict is yet another nested dictionary
+            # {"overall": {},
+            #  "human overall": {},
+            #  ...}
 
-            for auc_type in auroc_to_compute:
+            auc_dict = {key: {} for key in auc_to_compute}
+
+            for auc_type in auc_to_compute:
                 if auc_type == "overall":
                     # If the column contains anyting
                     ind = df['mhc_class'].str.contains('.')
@@ -465,14 +563,20 @@ class pMTnet_Omni_class:
                 if np.sum(ind) < 1:
                     continue
 
-                auc = get_auroc(
-                    true_labels=df[ind]['true_label'], predictions=df[ind]['rank_'+str(b)])
-                auc_dict[auc_type][0] = auc
-                pp.savefig(plot_roc_curve(true_labels=df[ind]['true_label'],
-                                          predictions=df[ind]['rank_'+str(b)],
-                                          label=missingness+" "+auc_type+": "+str(auc)))
+                fpr, tpr, _ = metrics.roc_curve(
+                    y_true=df[ind]['true_label'], y_score=df[ind]['percentile_rank_'+str(b)])
+                precision, recall, _ = metrics.precision_recall_curve(
+                    y_true=df[ind]['true_label'], probas_pred=df[ind]['percentile_rank_'+str(b)])
+                auroc = round(metrics.auc(fpr, tpr), ndigits=ndigits)
+                auprc = round(metrics.auc(recall, precision), ndigits=ndigits)
 
-            # Convert the results to dataframe
-            result_dfs[missingness] = pd.DataFrame(auc_dict)
-        pp.close()
-        return result_dfs
+                auc_dict[auc_type]["fpr"] = fpr
+                auc_dict[auc_type]["tpr"] = tpr
+                auc_dict[auc_type]["precision"] = precision
+                auc_dict[auc_type]["recall"] = recall
+                auc_dict[auc_type]["auroc"] = auroc
+                auc_dict[auc_type]["auprc"] = auprc
+
+            result_dicts[missingness] = auc_dict
+
+        return result_dicts

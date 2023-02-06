@@ -42,8 +42,8 @@ class pMHCTCR(nn.Module):
                 pmhctcr: torch.tensor) -> torch.tensor:
         """Forward pass of the classifier
 
-        Paramaters
-        ---------
+        Parameters
+        -----------
 
         Returns
         ---------
@@ -65,8 +65,8 @@ class pMHCTCR(nn.Module):
         This is basically the forward pass but with no gradient.
         We also convert the result to numpy array.
 
-        Paramaters
-        ---------
+        Parameters
+        ------------
 
         Returns
         ---------

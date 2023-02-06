@@ -60,15 +60,15 @@ def test_parser_help(cmdarg):
 
 
 @pytest.mark.parametrize("model_device, data_dir, seed, user_data_path,\
-                        partition_size, rank_threshold, not_load_embedding,\
-                        check_size, load_size, minibatch_size, log_file_path,\
-                        output_file_path", [
-    ("cpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
-    ("gpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
-    ("cpu", './tests/test_data', 42, './tests/test_data/test_df.csv', 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
+                        partition_size, compute_percentile_rank,rank_threshold,\
+                        not_load_embedding, check_size, load_size, minibatch_size,\
+                        log_file_path, output_file_path", [
+    ("cpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
+    ("gpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, True, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
+    ("cpu", './tests/test_data', 42, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
 ])
 def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, user_data_path,
-                        partition_size, rank_threshold, not_load_embedding,
+                        partition_size, compute_percentile_rank, rank_threshold, not_load_embedding,
                         check_size, load_size, minibatch_size, log_file_path,
                         output_file_path):
     cmdargs: mocker.MagicMock = mocker.MagicMock() 
@@ -77,6 +77,7 @@ def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, user_data_path,
     cmdargs.seed = seed
     cmdargs.user_data_path = user_data_path
     cmdargs.partition_size = partition_size
+    cmdargs.compute_percentile_rank = compute_percentile_rank
     cmdargs.rank_threshold = rank_threshold
     cmdargs.not_load_embedding = not_load_embedding
     cmdargs.check_size = check_size
@@ -96,16 +97,16 @@ def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, user_data_path,
 
 
 @pytest.mark.parametrize("model_device, data_dir, seed, user_data_path,\
-                        partition_size, rank_threshold, not_load_embedding,\
-                        check_size, load_size, minibatch_size, log_file_path,\
-                        output_file_path", [
-    ("cpu", './tests/test_data', None, None, 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
-    ("cpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.txt"),
-    ("gpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, 0.05, False, [10,20], 5, 5, None, None),
-    ("cpu", './tests/test_data', 42, './tests/test_data/test_df.json', 2, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
+                        partition_size, compute_percentile_rank,rank_threshold,\
+                        not_load_embedding, check_size, load_size, minibatch_size,\
+                        log_file_path, output_file_path", [
+    ("cpu", './tests/test_data', None, None, 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
+    ("cpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.txt"),
+    ("gpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, None),
+    ("cpu", './tests/test_data', 42, './tests/test_data/test_df.json', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
 ])
 def test_pmtnet_omni_main_error(mocker, model_device, data_dir, seed, user_data_path,
-                        partition_size, rank_threshold, not_load_embedding,
+                        partition_size, compute_percentile_rank, rank_threshold, not_load_embedding,
                         check_size, load_size, minibatch_size, log_file_path,
                         output_file_path):
     cmdargs: mocker.MagicMock = mocker.MagicMock() 
@@ -114,6 +115,7 @@ def test_pmtnet_omni_main_error(mocker, model_device, data_dir, seed, user_data_
     cmdargs.seed = seed
     cmdargs.user_data_path = user_data_path
     cmdargs.partition_size = partition_size
+    cmdargs.compute_percentile_rank = compute_percentile_rank
     cmdargs.rank_threshold = rank_threshold
     cmdargs.not_load_embedding = not_load_embedding
     cmdargs.check_size = check_size

@@ -43,7 +43,7 @@ parser.add_argument("--author", action="version", version=__author__,
 
 # Initialize pMTnet_Omni class
 parser.add_argument(
-    "--model_device", choices=["cpu", "gpu", "cuda:0"], default="cpu", help="Choose the model device")
+    "--model_device", choices=["cpu", "gpu", "cuda:0"], default="cuda:0", help="Choose the model device")
 parser.add_argument("--data_dir", default="./data",
                     help="The data directory containing data necessary for model setups")
 parser.add_argument("--seed", type=int, nargs="?",
@@ -52,9 +52,11 @@ parser.add_argument("--seed", type=int, nargs="?",
 # User input
 parser.add_argument("--user_data_path", help="The path the user data file")
 parser.add_argument("--partition_size", type=int,
-                    default=7000, help="Size for each partition")
+                    default=500, help="Size for each partition")
 
 # Prediction
+parser.add_argument("--compute_percentile_rank", action="store_true",
+                    help="Whether or not to compute percentile ranks")
 parser.add_argument("--rank_threshold", type=float, default=0.03,
                     help="The rank percentile threshold greater than which further varification is NOT conducted")
 parser.add_argument("--not_load_embedding", action="store_true",
@@ -122,15 +124,15 @@ def main(cmdargs: argparse.Namespace):
                         header=0,
                         partition_size=cmdargs.partition_size)
 
-    # Encode user file
-    pmtnet.encode_user_df()
-    # Get model raw output
-    pmtnet.get_user_df_output()
-
     # Prediction using rank against background
     load_embedding = not cmdargs.not_load_embedding
-
-    pmtnet.predict(rank_threshold=cmdargs.rank_threshold,
+    compute_percentile_rank = cmdargs.compute_percentile_rank
+    
+    pmtnet.predict(verbose=True,
+                   create_incomplete_data=False,
+                   compute_percentile_rank=compute_percentile_rank,
+                   output_file_path=cmdargs.output_file_path,
+                   rank_threshold=cmdargs.rank_threshold,
                    load_embedding=load_embedding,
                    replacement=True,
                    check_size=list(cmdargs.check_size),
@@ -138,12 +140,6 @@ def main(cmdargs: argparse.Namespace):
                    minibatch_size=cmdargs.minibatch_size,
                    log_file_path=cmdargs.log_file_path)
 
-    # Amalagamate all the predictions
-    df_dict, _, _ = pmtnet.amalgamate()
-    df_dict['complete'].to_csv(cmdargs.output_file_path,
-                               sep=",",
-                               header=True,
-                               index=False)
     sys.exit(0)
 
 

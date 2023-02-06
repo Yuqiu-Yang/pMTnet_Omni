@@ -18,6 +18,7 @@ Here is a quick overview of the structure of the model:
 
 .. image:: ./images/overview.png
    :width: 600
+   :align: center
 
 For a more detailed exploration of our model, please refer to `our paper <https://www.google.com>`_:
 
@@ -30,12 +31,14 @@ The supporting data as well as the online tool are hosted here `here <http://lce
 Dependencies
 --------------
 
+* python>=3.9
 * numpy==1.22.4
 * pandas==1.5.2
 * matplotlib==3.6.2
 * scikit-learn==1.0.2
 * tqdm==4.64.1
 * torch==1.13.1
+* fair-esm==2.0.0
 
 Quick (but sloppy) Installation
 --------------------------------
@@ -59,10 +62,15 @@ User Guide / Tutorial
    quick_start
 
 .. toctree::
+   :maxdepth: 3
+   :caption: Input Format
+
+   input_format/index
+
+.. toctree::
    :maxdepth: 1
    :caption: Guided Tutorial
 
-   tutorial/input_file
    tutorial/details
 
 .. toctree::

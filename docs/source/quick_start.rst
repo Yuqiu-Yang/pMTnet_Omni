@@ -1,5 +1,5 @@
 Quick Start Guide
-==============
+==================
 So I hear your week has been hectic. 
 No worries. In this tutorial, we will walk through the basic usage of 
 **pMTnet Omni** with minimum configuration. 
@@ -16,17 +16,23 @@ If you are truly swamped, we recommend `our online tool <http://lce-test.biohpc.
     We will assume that you already have the environment set up. 
 
 .. note::
-    For this tutorial, we will assume that the file path to the data directory **"./data"**
-
-    We will assume that the file path to the user data file is **"./df.csv"**
+    For this tutorial, we will assume that the file path to the data directory is **"./data"**.
+    If you are not sure if your directory is correctly configured, check out :doc:`installation_guide`.
 
 .. note::
-    Make sure your data file is structured like the following:
+    We will use the validation data we published along with the package, whose location we 
+    assume is at **./validation_data/val_df.csv**. It contained 
+    around 5,000 TCR-pMHC pairs. The entire validation process could take several
+    minutes. 
+    
+    If you would like to use your own data file, make sure your data file is structured 
+    somewhat like the following:
 
     .. image:: ./images/sample_df.png
         :width: 600
+        :align: center
 
-    For a more detailed instruction on the data format, please check out :doc:`tutorial/input_file`. 
+    For a more detailed instruction on the data format, please check out :doc:`input_format/index`. 
 
 
 CLI (Command Line Interface)
@@ -35,16 +41,13 @@ By using CLI, you only need one line of code.
 
 .. code:: bash 
 
-    python -m pMTnet_Omni --data_dir "./data" --user_data_path "./df.csv" --output_file_path "./df_results.csv"
+    python -m pMTnet_Omni --data_dir ./data --user_data_path ./validation_data/val_df.csv --compute_percentile_rank --output_file_path ./validation_results/val_df_results.csv
 
 
 Interactive Python 
-------------------
-Via interactive Python, you will need more steps to get your final results. 
-However, you get to inspect the results of each step of the model output.
-
+-------------------
 Initialize the pMTnet_Omni_class 
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python 
 
     # Import pMTnet Omni clas 
@@ -58,31 +61,23 @@ User Data Preprocessing
 .. code-block:: python 
     
     # Read user data 
-    pmtnet.read_user_df(user_data_path="./df.csv")
+    pmtnet.read_user_df(user_data_path="./validation_data/val_df.csv")
 
-    # Create embedding for user data 
-    pmtnet.encode_user_df()
 
 Model Prediction 
 ~~~~~~~~~~~~~~~~
 .. code-block:: python 
 
-    # Get model raw output 
-    pmtnet.get_user_df_output()
-
     # Final predcition 
-    pmtnet.predict()
+    pmtnet.predict(output_file_path="./validation_results/val_df_results.csv")
 
-Save Prediction Results
-~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: python 
+If you check the `./validation_results` directory, you should be able to find 
+a `.csv` file named `val_df_results_complete.csv`, whose content would look
+somewhat like this 
 
-    # Combine all the partitions 
-    df_dict, _, _ = pmtnet.amalgamate()
-
-    # Save the result 
-    df_dict['complete'].to_csv("./df_results.csv", index=False)
-
+.. image:: ./images/sample_output.png
+    :width: 600
+    :align: center
 
 
 

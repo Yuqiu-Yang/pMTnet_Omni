@@ -15,33 +15,59 @@ import torch
 import re
 
 # ROC curve
-from sklearn import metrics
+# from sklearn import metrics
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 # Progress bar
 from tqdm import tqdm
 
 # Typing
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 
 def check_column_names(df: pd.DataFrame,
                        background_tcrs_dir: str = "./data/background_tcrs/") -> pd.DataFrame:
     """Check if the columns are correct 
+
+    The main purpose of this function is to make sure that the dataframe 
+    provided by the users contains necessary columns so that 
+    it can be used by subsequent functions 
+
     This function checks and corrects the column names provided in the user dataframe.
+
     What's more, it can also automatically create some missing columns.
+
     The column name to be used in all the following functions are:
-    "va": name of alpha V gene (NAMING CONVENTION HERE)
+
+    "va": name of alpha V gene 
+
     "cdr3a": amino acid sequence of CDR3 region on the alpha chain
+
     "vaseq": amino acid sequence of the alpha V gene 
+
     "vb": name of beta V gene
+
     "cdr3b": amino acid sequence of CDR3 region on the beta chain
+
     "vbseq": amino acid sequence of the beta V gene 
+
     "peptide": amino acid sequence of the peptide presented by mhc 
-    "mhca": name of mhc alpha chain (NAMING CONVENTION HERE)
+
+    "mhca": name of mhc alpha chain 
+
     "mhcb": name of mhc beta chain 
+
+    "mhcaseq": sequence of mhca
+
+    "mhcbseq" : sequence of mhcb
+
     "tcr_species": species of TCR (human or mouse)
+
     "pmhc_species": species of peptide-mhc
+
+    This function will NOT create mhca, mhcb, mhcaseq, mhcbseq.
+    It will keep the original column mhc, mhcseq.
 
     Parameters
     ----------
@@ -58,23 +84,34 @@ def check_column_names(df: pd.DataFrame,
     """
     # Define the column names to be used
     common_column_names = ["va", "cdr3a", "vaseq", "vb", "cdr3b", "vbseq",
-                           "peptide", "mhca", "mhcb", "tcr_species", "pmhc_species"]
+                           "peptide", "mhc", "mhcseq",
+                           "tcr_species", "pmhc_species"]
     # Get rid of spaces, convert names to lowercase, remove special characters
     print("Checking column names...\n")
-    df.columns = df.columns.str.replace(' ','').str.lower().str.replace(
+    df.columns = df.columns.str.replace(' ', '').str.lower().str.replace(
         "_", "").str.replace(r'\W', '', regex=True)
     df_cols = df.columns.tolist()
     for i in range(len(df_cols)):
+        # We get rid of white spaces from each column
+        df[df_cols[i]] = df[df_cols[i]].str.replace(' ', '')
         df_cols[i] = re.sub(r'(?<=tcr).*(?=species)', "_", df_cols[i])
         df_cols[i] = re.sub(r'(?<=pmhc).*(?=species)', "_", df_cols[i])
     df.columns = df_cols
+    # As we already have a large number of mhcs
+    # we do not expect users to come up with new ones
+    if 'mhcseq' not in df_cols:
+        df['mhcseq'] = ''
+    ##################################################
+    # We first make sure that all required columns are present
+    # in the dataframe
+    ##################################################
     # Get names not presented in the user dataframe
     user_df_set = set(df_cols)
     required_set = set(common_column_names)
     diff_set = required_set - user_df_set
 
     error_messages = "".join(["Column " + name + " can not be found.\n"
-                              for name in ["cdr3a", "cdr3b", "peptide", "mhca", "mhcb",
+                              for name in ["cdr3a", "cdr3b", "peptide", "mhc",
                                            "tcr_species", "pmhc_species"] if name in diff_set])
 
     if error_messages != "":
@@ -85,6 +122,15 @@ def check_column_names(df: pd.DataFrame,
 
     if ("vb" in diff_set) and ("vbseq" in diff_set):
         raise Exception("At least one of vb and vbseq need to exist")
+
+    ##################################################
+    # We then check tcr_species and pmhc_species
+    # as later steps depend on these two columns
+    ##################################################
+    df["tcr_species"] = df["tcr_species"].str.lower().str.replace(' ', '').str.replace(
+        "_", "").str.replace(r'\W', '', regex=True)
+    df["pmhc_species"] = df["pmhc_species"].str.lower().str.replace(' ', '').str.replace(
+        "_", "").str.replace(r'\W', '', regex=True)
 
     if not set(df['tcr_species'].values).issubset(set(['human', 'mouse'])):
         raise Exception("tcr_species have to be human or mouse")
@@ -124,7 +170,107 @@ def check_column_names(df: pd.DataFrame,
             mouse_df = mouse_df.merge(mouse_beta_tcrs, on="vb", how='left')
 
         df = pd.concat([human_df, mouse_df], axis=0, ignore_index=True)
-        return df[common_column_names]
+        return df[common_column_names].reset_index(drop=True)
+
+
+def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
+    """Infer the MHC classes and create columns mhca and mhcb
+
+    The input df should be the output of the check_column_names function.
+
+    Parameters
+    ---------
+    df: pd.DataFrame
+        A pandas dataframe containing mhc, mhcseq, and pmhc_species
+
+    Returns
+    ---------
+    pd.DataFrame
+        A column of a pandas dataframe with the inferred MHC classes, 
+        MHCs on the alpha chain and the beta chain 
+    """
+    df = df.reset_index(drop=True)
+    # Human class I starts with A, B, or C
+    human_class_i = ("A", "B", "C")
+    # Class II starts with DP, DQ, or DR
+    human_class_ii = ("DP", "DQ", "DR")
+    # Mouse class I starts with D, K, L, Q
+    mouse_class_i = tuple(["H-2-" + i for i in ["D", "K", "L", "Q"]])
+    # Class II starts with IA, IE
+    mouse_class_ii = tuple(["H-2-" + i for i in ["IA", "IE"]])
+
+    mhc_class = []
+    mhca = []
+    mhcb = []
+    mhcaseq = []
+    mhcbseq = []
+
+    for i in range(df.shape[0]):
+        mhc = df.at[i, "mhc"]
+        mhcseq = df.at[i, "mhcseq"]
+        # We clean up the input a little bit
+        # We remove HLA and H2 which will be added backed if necessary
+        # so as to make sure the format is coherent
+        mhc = mhc.replace(' ', '').replace(
+            '-', '').replace('HLA', '').replace('H2', '')
+        mhcseq = mhcseq.replace(' ', '')
+        pmhc_species = df.at[i, "pmhc_species"]
+        if pmhc_species == "human":
+            if mhc.startswith(human_class_i):
+                # For human class I, mhca will be the
+                # input mhc. mhcb will be human_microglobulin
+                mhc_class.append('human class i')
+                mhca.append(mhc)
+                mhcb.append("human_microglobulin")
+                mhcaseq.append(mhcseq)
+                mhcbseq.append('')
+            elif mhc.startswith(human_class_ii):
+                # For human class II, usually alpha beta will both
+                # be provided
+                # However, for DR, its possible that only beta is provided
+                mhc_class.append('human class ii')
+                mhc_list = mhc.split('/')
+                mhcseq_list = mhcseq.split('/')
+                if (len(mhc_list) == 1) and (mhc.startswith("DR")):
+                    mhca.append("DRA*01:01")
+                    mhcb.append(mhc)
+                    mhcaseq.append('')
+                    mhcbseq.append(mhcseq)
+                else:
+                    mhca.append(mhc_list[0])
+                    mhcb.append(mhc_list[1])
+                    mhcaseq.append(mhcseq_list[0])
+                    mhcbseq.append(mhcseq_list[len(mhcseq_list)-1])
+            else:
+                raise ValueError("Class of " + mhc + " can not be determined")
+        elif pmhc_species == "mouse":
+            mhc = 'H-2-'+mhc
+            if mhc.startswith(mouse_class_i):
+                # For mouse Class I, it's on the alpha
+                # beta will be mouse_microglobulin
+                mhc_class.append('mouse class i')
+                mhca.append(mhc)
+                mhcb.append('mouse_microglobulin')
+                mhcaseq.append(mhcseq)
+                mhcbseq.append('')
+            elif mhc.startswith(mouse_class_ii):
+                # For mouse Class II, alpha and beta
+                # will share the same mhc
+                mhc_class.append('mouse class ii')
+                mhca.append(mhc+"_alpha")
+                mhcb.append(mhc+"_beta")
+                mhcaseq.append(mhcseq)
+                mhcbseq.append(mhcseq)
+            else:
+                raise ValueError("Class of " + mhc + " can not be determined")
+        else:
+            raise ValueError(pmhc_species + " is not human or mouse")
+
+    return pd.DataFrame(data={"mhca": mhca,
+                              "mhcb": mhcb,
+                              "mhcaseq": mhcaseq,
+                              "mhcbseq": mhcbseq,
+                              "mhc_class": mhc_class})
 
 
 def check_data_sanity(df: pd.DataFrame,
@@ -137,12 +283,12 @@ def check_data_sanity(df: pd.DataFrame,
     df: pd.DataFrame
         A pandas dataframe containing pairing data
     mhc_path: str
-        The file path to valide mhcs 
+        The file path to valid mhcs 
 
     Returns
     ---------
     df.DataFrame
-        A pandas dataframe containing currated pairing data
+        A pandas dataframe containing curated pairing data
     """
     print("Check data format...\n")
     # We drop NAs first
@@ -159,18 +305,24 @@ def check_data_sanity(df: pd.DataFrame,
             str(num_row-df.shape[0])+' antigens longer than ' + str(30) + 'aa are dropped:')
         print(df_antigen_dropped)
 
-    # 3. input MHC that is not in the ESM dictionary will be dropped
+    # 3. input MHC that is not in the ESM dictionary and
+    # whose corresponding sequence are not provided will be dropped
     num_row = df.shape[0]
     with open(mhc_path, 'r') as f:
         mhc_dic_keys = f.read().splitlines()
     mhc_dic_keys = set(mhc_dic_keys)
-    df_mhc_alpha_dropped = df[~df["mhca"].isin(mhc_dic_keys)]
-    df_mhc_beta_dropped = df[~df["mhcb"].isin(mhc_dic_keys)]
-    df = df[df["mhca"].isin(mhc_dic_keys)]
-    df = df[df["mhcb"].isin(mhc_dic_keys)]
+    df_mhc_alpha_dropped = df[(~df["mhca"].isin(mhc_dic_keys)) &
+                              (df['mhcaseq'] == '')]
+    df_mhc_beta_dropped = df[(~df["mhcb"].isin(mhc_dic_keys)) &
+                             (df['mhcbseq'] == '')]
+    df = df[(df["mhca"].isin(mhc_dic_keys)) | (df['mhcaseq'] != '')]
+    df = df[(df["mhcb"].isin(mhc_dic_keys)) | (df['mhcbseq'] != '')]
+    df['mhca_use_seq'] = ~df['mhca'].isin(mhc_dic_keys)
+    df['mhcb_use_seq'] = ~df['mhcb'].isin(mhc_dic_keys)
+
     if((num_row-df.shape[0]) > 0):
         print(str(num_row-df.shape[0]) +
-              ' MHCs without ESM embedding are dropped:')
+              ' MHCs without ESM embedding and not corresponding sequences are dropped:')
         print(pd.unique(df_mhc_alpha_dropped["mhca"]))
         print(pd.unique(df_mhc_beta_dropped["mhcb"]))
     df = df.reset_index(drop=True)
@@ -211,53 +363,12 @@ def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
     return df_column
 
 
-def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
-    """Infer the MHC classes
-
-    Parameters
-    ---------
-    df: pd.DataFrame
-        A pandas dataframe containing mhca, mhcb
-
-    Returns
-    ---------
-    pd.DataFrame
-        A column of a pandas dataframe with the inferred MHC classes 
-    """
-    df = df.reset_index()
-    # Human class I starts with A, B, or C
-    human_class_i = ("A", "B", "C")
-    # Class II starts with DP, DQ, or DR
-    human_class_ii = ("DP", "DQ", "DR")
-    # Mouse class I starts with D, K, L, Q
-    mouse_class_i = tuple(["H-2-" + i for i in ["D", "K", "L", "Q"]])
-    # Class II starts with IA, IE
-    mouse_class_ii = tuple(["H-2-" + i for i in ["IA", "IE"]])
-
-    mhc_class = []
-    for i in range(df.shape[0]):
-        mhca = df.at[i, "mhca"]
-        mhcb = df.at[i, "mhcb"]
-        if (mhca.startswith(human_class_i)) or (mhcb.startswith(human_class_i)):
-            mhc_class.append('human class i')
-        elif (mhca.startswith(human_class_ii)) or (mhcb.startswith(human_class_ii)):
-            mhc_class.append('human class ii')
-        elif (mhca.startswith(mouse_class_i)) or (mhcb.startswith(mouse_class_i)):
-            mhc_class.append('mouse class i')
-        elif (mhca.startswith(mouse_class_ii)) or (mhcb.startswith(mouse_class_ii)):
-            mhc_class.append('mouse class ii')
-        else:
-            raise ValueError("The class of neither "+mhca +
-                             " nor "+mhcb+" can be recognized.")
-    return pd.DataFrame(data={"mhc_class": mhc_class})
-
-
 def read_file(file_path: str,
               sep: str = ",",
               header: int = 0,
               background_tcr_dir: str = "./data/background_tcrs/",
               mhc_path: str = "./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
-    """Reads in user dataframe and performs some basic data curration 
+    """Reads in user dataframe and performs some basic data curation 
 
     Parameters:
     -----------
@@ -270,12 +381,12 @@ def read_file(file_path: str,
     background_tcr_dir: str
         The directory with background TCR datasets 
     mhc_path: str
-        The file path to valide mhcs 
+        The file path to valid mhcs 
 
     Returns
     -------
     pd.DataFrame
-        A currated pandas dataframe 
+        A curated pandas dataframe 
 
     """
     print('Attempting to read in the dataframe...\n')
@@ -283,55 +394,149 @@ def read_file(file_path: str,
     print("Number of rows in raw dataset: " + str(df.shape[0]))
     # Check column names
     df = check_column_names(df, background_tcr_dir)
-    # Perform some basic curation
-    df = check_data_sanity(df, mhc_path)
     mhc_class = get_mhc_class(df=df)
     df = pd.concat([df, mhc_class], axis=1, ignore_index=False)
+    df = df.drop(['mhc', 'mhcseq'], axis=1)
+    # Perform some basic curation
+    df = check_data_sanity(df, mhc_path)
     return df
 
 
-def get_auroc(true_labels: Union[np.ndarray, pd.DataFrame],
-              predictions: Union[np.ndarray, pd.DataFrame],
-              ndigits: int = 3) -> float:
-    """Compute AUROC
+def plot_validation_curve(result_dicts: dict,
+                          plot_type: str,
+                          primary_type: str,
+                          secondary_types: Optional[Union[str, list]] = None,
+                          title: Optional[str] = None,
+                          figure_save_path: Optional[str] = None) -> None:
+    """Plot ROC and/or PRC
+
+    This function is used to plot ROC curves and PR (precision-recall) curves 
+    based on the validate method of the pMTnet_Omni_class 
+    
+    The function will first seek out all data (x, y, auc) satisfying primary_type
+    then plot multiple curves based on secondary_types
 
     Parameters
-    ---------
-    true_labels: Union[np.ndarray, pd.DataFrame]
-        The true labels 
-    predictions: Union[np.ndarray, pd.DataFrame]
-        The output of the model 
-
-    Returns
-    --------
-    float
-        AUROC
+    ----------
+    result_dicts : dict
+        This should be the output of the validate method. 
+        It should be a nested dictionary
+        
+        {"complete": {"overall": {"fpr": np.ndarray,
+        
+                                  "tpr": np.ndarray,
+                                  
+                                  "precision": np.ndarray,
+                                  
+                                  "recall": np.ndarray,
+                                  
+                                  "auroc": float,
+                                  
+                                  "auprc": float},
+                                  
+                      "human overall": {},
+                      
+                      ...}, 
+                      
+         "alpha missing": {},
+         
+         "beta missing": {}}
+    plot_type : str
+        Either roc or prc 
+    primary_type : str
+        It can either be one of the 3 missing patterns or one of the 7 mhc classes 
+    secondary_types : Optional[Union[str, list]], optional
+        It can either be one of the 3 missing patterns or one of the 7 mhc classes 
+    title : Optional[str], optional
+        The plot title. If missing, the primary type will be used 
+    figure_save_path : str, optional
+        The path where the figure where be saved 
 
     """
-    auc = metrics.roc_auc_score(true_labels, predictions)
-    return round(auc, ndigits=ndigits)
+    # The nams used in the code are not suitable for plotting
+    # Therefore, when creating the title, we will use their mappings
+    type_map = {"complete": "Both Chains",
+                "alpha missing": "Beta Chain",
+                "beta missing": "Alpha Chain",
+                "overall": "All",
+                "human overall": "Human",
+                "mouse overall": "Mouse",
+                "human class i": "Human C1",
+                "human class ii": "Human C2",
+                "mouse class i": "Mouse C1",
+                "mouse class ii": "Mouse C2"}
 
+    if plot_type == "roc":
+        x_key = "fpr"
+        x_label = '1 - Specificity'
+        y_key = "tpr"
+        y_label = 'Sensitivity'
+        auc_key = "auroc"
+        legend_pos = "lower right"
+    elif plot_type == "prc":
+        x_key = "recall"
+        x_label = "Recall"
+        y_key = "precision"
+        y_label = "Precision"
+        auc_key = "auprc"
+        legend_pos = "lower left"
+    else:
+        raise Exception("Only roc or prc are acceptable.\n")
 
-def plot_roc_curve(true_labels: Union[np.ndarray, pd.DataFrame],
-                   predictions: Union[np.ndarray, pd.DataFrame],
-                   label: str = "") -> None:
-    """Plot roc curve 
+    if isinstance(secondary_types, str):
+        secondary_types = [secondary_types]
+    
+    if primary_type in ["complete", "alpha missing", "beta missing"]:
+        if result_dicts[primary_type] is None:
+            raise Exception(primary_type + " has not been computed.\n")
+        if secondary_types is None:
+            secondary_types = list(result_dicts[primary_type].keys())
 
-    Parameters
-    ---------
-    true_labels: Union[np.ndarray, pd.DataFrame]
-        The true labels 
-    predictions: Union[np.ndarray, pd.DataFrame]
-        The output of the model 
-    label:
-        Plot title 
+        plot_dict = {s_type: {"x": result_dicts[primary_type][s_type][x_key],
+                              "y": result_dicts[primary_type][s_type][y_key],
+                              "auc": result_dicts[primary_type][s_type][auc_key]} for s_type in secondary_types}
 
-    """
-    fpr, tpr, _ = metrics.roc_curve(true_labels, predictions)
-    f = plt.figure()
-    plt.plot(fpr, tpr)
-    plt.title(label=label)
-    return f
+    elif primary_type in ["overall", "human overall", "mouse overall",
+                          "human class i", "human class ii",
+                          "mouse class i", "mouse class ii"]:
+        if secondary_types is None:
+            secondary_types = ["complete", "alpha missing", "beta missing"]
+
+        plot_dict = {s_type: {"x": result_dicts[s_type][primary_type][x_key],
+                              "y": result_dicts[s_type][primary_type][y_key],
+                              "auc": result_dicts[s_type][primary_type][auc_key]} for s_type in secondary_types if result_dicts[s_type] is not None}
+
+    else:
+        raise Exception("Unknown type\n")
+
+    if title is None:
+        title = type_map[primary_type]
+
+    colors = mpl.colormaps["inferno"].resampled(len(secondary_types) + 1)
+
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle(title, fontsize=60)
+
+    counter = 0
+    for s_type in plot_dict:
+        plt.plot(plot_dict[s_type]["x"],
+                 plot_dict[s_type]["y"],
+                 linewidth=10, color=colors.colors[counter],
+                 label=type_map[s_type]+": AUC = "+str(plot_dict[s_type]["auc"]))
+        counter += 1
+
+    plt.xlabel(x_label, fontsize=55)
+    plt.ylabel(y_label, fontsize=55)
+
+    plt.xticks(fontsize=45)
+    plt.yticks(fontsize=45)
+
+    plt.legend(loc=legend_pos, fontsize=55)
+    plt.tight_layout()
+    
+    if figure_save_path is not None:
+        plt.savefig(figure_save_path)
 
 
 def batchify_check_size(check_size: list = [10, 20],
@@ -530,7 +735,7 @@ def check_data_dir_structure(path: str) -> Tuple[list, str]:
     if (not set(required_dir_structure['dirs'].keys()).issubset(set(user_data_dir_dict['dirs'].keys()))) or \
         (not required_dir_structure['dirs']['background_tcrs']['files'].issubset(user_data_dir_dict['dirs']['background_tcrs']['files'])) or \
         (not set(required_dir_structure['dirs']['data_for_encoders']['dirs'].keys()).issubset(set(user_data_dir_dict['dirs']['data_for_encoders']['dirs'].keys()))) or \
-        (not required_dir_structure['dirs']['data_for_encoders']['files'].issubset(user_data_dir_dict['dirs']['data_for_encoders']['files'])):
+            (not required_dir_structure['dirs']['data_for_encoders']['files'].issubset(user_data_dir_dict['dirs']['data_for_encoders']['files'])):
         dict_to_dir(required_dir_structure, pt_file_number_limit=2)
         raise Exception("See above for the required directory structure.\n")
 

@@ -1,15 +1,16 @@
 import pytest
-import pandas as pd 
-import numpy as np 
-import csv 
-import os 
-from tqdm import tqdm 
+import pandas as pd
+import numpy as np
+import csv
+import os
+from tqdm import tqdm
+import esm
 
-
+from pMTnet_Omni.utilities import read_file
 from pMTnet_Omni.encoders.utilities import esm_mapping,\
-                                           mhc_map,\
-                                           aa_mapping,\
-                                           peptide_map
+    mhc_map,\
+    aa_mapping,\
+    peptide_map
 
 aa_dict_atchley = dict()
 with open('./tests/test_data/data_for_encoders/Atchley_factors.csv', 'r') as aa:
@@ -30,41 +31,61 @@ for file_name in tqdm(mhc_files):
         line = f.readline()
     mhc_dict[line] = "./tests/test_data/data_for_encoders/mhc_dict/" + file_name
 
+model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+batch_converter = alphabet.get_batch_converter()
+model.eval()
 ###########################
-# mhc_map 
-@pytest.mark.parametrize("mhc, mhc_dict", [
-    ("A*03:01", mhc_dict)
+# mhc_map
+
+
+@pytest.mark.parametrize("mhc, mhc_dict, use_seq, mhcseq, model, batch_converter", [
+    ("A*03:01", mhc_dict, False, "", model, batch_converter),
+    ("A*01:01", mhc_dict, True, "MAVMAPRTLLLLLSGALALTQTWAGSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQKMEPRAPWIEQEGPEYWDQETRNMKAHSQTDRANLGTLRGYYNQSEDGSHTIQIMYGCDVGPDGRFLRGYRQDAYDGKDYIALNEDLRSWTAADMAAQITKRKWEAVHAAEQRRVYLEGRCVDGLRRYLENGKETLQRTDPPKTHMTHHPISDHEATLRCWALGFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGEEQRYTCHVQHEGLPKPLTLRWELSSQPTIPIVGIIAGLVLLGAVITGAVVAAVMWRRKSSDRKGGSYTQAASSDSAQGSDVSLTACKV", model, batch_converter),
 ])
-def test_esm_mapping(mhc, mhc_dict):
+def test_esm_mapping(mhc, mhc_dict, use_seq, mhcseq, model, batch_converter):
     try:
-        result = esm_mapping(mhc=mhc, mhc_dict=mhc_dict)
+
+        result = esm_mapping(mhc=mhc,
+                             mhc_dict=mhc_dict,
+                             use_seq=use_seq,
+                             mhcseq=mhcseq,
+                             model=model,
+                             batch_converter=batch_converter)
         assert True
     except:
         assert False
+
 
 @pytest.mark.parametrize("column_name, mhc_dict, verbose", [
     ("mhca", mhc_dict, True),
     ("mhcb", mhc_dict, False),
 ])
 def test_mhc_map(column_name, mhc_dict, verbose):
-    test_df = pd.read_csv("./tests/test_data/test_df.csv")
+    test_df = read_file("./tests/test_data/test_df.csv",
+                        background_tcr_dir='./tests/test_data/background_tcrs/',
+                        mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
     try:
-        result = mhc_map(df=test_df, column_name=column_name, mhc_dict=mhc_dict, verbose=verbose)
+        result = mhc_map(df=test_df, column_name=column_name,
+                         mhc_dict=mhc_dict, verbose=verbose)
         assert True
     except:
-        assert False 
+        assert False
 
 #########################
-# peptide_map aa_mapping 
+# peptide_map aa_mapping
+
+
 @pytest.mark.parametrize("peptide_seq, aa_dict_atchley, padding", [
     ("CALSDRYGGATNKLIF", aa_dict_atchley, 25)
 ])
 def test_aa_mapping(peptide_seq, aa_dict_atchley, padding):
     try:
-        result = aa_mapping(peptide_seq=peptide_seq, aa_dict_atchley=aa_dict_atchley, padding=padding)
+        result = aa_mapping(peptide_seq=peptide_seq,
+                            aa_dict_atchley=aa_dict_atchley, padding=padding)
         assert True
     except:
-        assert False 
+        assert False
+
 
 @pytest.mark.parametrize("column_name, aa_dict_atchley, padding, verbose", [
     ("cdr3b", aa_dict_atchley, 25, True),
@@ -72,8 +93,9 @@ def test_aa_mapping(peptide_seq, aa_dict_atchley, padding):
 ])
 def test_peptide_map(column_name, aa_dict_atchley, padding, verbose):
     test_df = pd.read_csv("./tests/test_data/test_df.csv")
-    try: 
-        result = peptide_map(df=test_df, column_name=column_name, aa_dict_atchley=aa_dict_atchley,padding=padding, verbose=verbose)
+    try:
+        result = peptide_map(df=test_df, column_name=column_name,
+                             aa_dict_atchley=aa_dict_atchley, padding=padding, verbose=verbose)
         assert True
     except:
-        assert False 
+        assert False

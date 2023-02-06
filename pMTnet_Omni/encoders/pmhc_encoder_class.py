@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 # Typing
-from typing import Optional
+from typing import Optional, Union
 
 # Utilities and model
 from pMTnet_Omni.encoders.pmhc_encoder_model import pMHC
@@ -18,19 +18,22 @@ from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
 
 class pmhc_encoder_class:
     def __init__(self,
-                 model_device: str,
+                 model_device: Union[str, torch.device],
                  pMHCcheckpoint_path: Optional[str] = None) -> None:
         """The pMHC encoder
 
         Parameters
         ---------
-        model_device: str
+        model_device: torch.device
             cpu or gpu
         pMHCcheckpoint_path: Optional[str]
             The path to pMHC the encoder
         
         """
+        if isinstance(model_device, str):
+            model_device = torch.device(model_device)
         self.model_device = model_device
+        
         self.pmhc_model = pMHC().to(model_device)
         
         print("Attempt to load the pMHC encoder\n")
@@ -82,7 +85,7 @@ class pmhc_encoder_class:
                                        column_name="mhcb",
                                        mhc_dict=mhc_dict,
                                        verbose=verbose)).to(self.model_device)
-            if self.model_device == "cpu":
+            if self.model_device.type == "cpu":
                 print("As the device is cpu, we will encode pMHCs sequentially.\n")
                 pmhc_embedding = torch.zeros(df.shape[0], 30)
                 for i in tqdm(range(df.shape[0])):

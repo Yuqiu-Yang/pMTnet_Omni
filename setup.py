@@ -71,7 +71,8 @@ setup(
         'matplotlib==3.6.2',
         'scikit-learn==1.0.2',
         'tqdm==4.64.1',
-        'torch==1.13.1'
+        'torch==1.13.1',
+        'fair-esm'
     ],
     test_requires=[
         'pytest==7.1.2',

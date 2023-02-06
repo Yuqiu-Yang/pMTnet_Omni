@@ -17,9 +17,9 @@ def test_pMTnet_Omni_class_partitions(seed, partition_size, create_incomplete_da
                                seed=seed)
     pmtnet.read_user_df(
         user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size)
-    pmtnet.encode_user_df()
+    pmtnet._encode_user_df()
     if create_incomplete_data:
-        pmtnet.create_incomplete_data()
+        pmtnet._create_incomplete_data()
     assert (len(pmtnet.user_df_dict['complete']) == expected[0]) and \
         (len(pmtnet.user_tcr_embedding_dict['alpha missing']) == expected[1]) and \
         (len(pmtnet.user_tcr_embedding_dict['beta missing']) == expected[2]) and \
@@ -36,26 +36,46 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
                                seed=None)
     pmtnet.read_user_df(
         user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size)
-    pmtnet.encode_user_df()
+    pmtnet._encode_user_df()
     if create_incomplete_data:
-        pmtnet.create_incomplete_data()
-    pmtnet.get_user_df_output()
-    pmtnet.predict(rank_threshold=0.05, B=2,
-                   load_embedding=load_embedding,
-                   replacement=True,
-                   check_size=[5, 10],
-                   load_size=5,
-                   minibatch_size=2,
-                   log_file_path=None)
-    df_dict, tcr_dict, pmhc_dict = pmtnet.amalgamate()
-    assert ("rank_0" in df_dict['complete'].columns) and\
-        ("rank_1" in df_dict['complete'].columns) and\
+        pmtnet._create_incomplete_data()
+    pmtnet._get_user_df_output()
+    pmtnet._compute_percentile_rank(rank_threshold=0.05, B=2,
+                                    load_embedding=load_embedding,
+                                    replacement=True,
+                                    check_size=[5, 10],
+                                    load_size=5,
+                                    minibatch_size=2,
+                                    log_file_path=None)
+    df_dict, tcr_dict, pmhc_dict = pmtnet._amalgamate()
+    assert ("percentile_rank_0" in df_dict['complete'].columns) and\
+        ("percentile_rank_1" in df_dict['complete'].columns) and\
         (df_dict['complete'].shape[0] == 4) and\
         (tcr_dict['complete'].shape[1] == 70) and\
         (pmhc_dict['complete'].shape[1] == 30) and\
         ((not create_incomplete_data) or (len(df_dict['alpha missing']) == 4)) and\
         ((not create_incomplete_data) or (
             len(df_dict['beta missing']) == 4))
+
+
+@pytest.mark.parametrize("create_incomplete_data, compute_percentile_rank, output_file_path", [
+    (True, True, './tests/test_data/test_df_results.csv'),
+    (False, True, './tests/test_data/test_df_results.csv'),
+    (False, False, './tests/test_data/test_df_results.csv')
+])
+def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_percentile_rank, output_file_path):
+    pmtnet = pMTnet_Omni_class(model_device="cpu",
+                               data_dir="./tests/test_data/",
+                               seed=None)
+    pmtnet.read_user_df(
+        user_data_path='./tests/test_data/test_df.csv')
+    try:
+        pmtnet.predict(create_incomplete_data=create_incomplete_data,
+                       compute_percentile_rank=compute_percentile_rank,
+                       output_file_path=output_file_path)
+        assert True
+    except:
+        assert False
 
 
 @pytest.mark.parametrize("create_incomplete_data, true_labels", [
@@ -69,20 +89,19 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
                                seed=None)
     pmtnet.read_user_df(
         user_data_path='./tests/test_data/test_df.csv', partition_size=5)
-    pmtnet.encode_user_df()
+    pmtnet._encode_user_df()
     if create_incomplete_data:
-        pmtnet.create_incomplete_data()
-    pmtnet.get_user_df_output()
-    pmtnet.predict(rank_threshold=1, B=1,
-                   load_embedding=True,
-                   replacement=True,
-                   check_size=[5, 10],
-                   load_size=5,
-                   minibatch_size=2,
-                   log_file_path='./tests/test_data/pmtnet_omni_predict_log.txt')
+        pmtnet._create_incomplete_data()
+    pmtnet._get_user_df_output()
+    pmtnet._compute_percentile_rank(rank_threshold=1, B=1,
+                                    load_embedding=True,
+                                    replacement=True,
+                                    check_size=[5, 10],
+                                    load_size=5,
+                                    minibatch_size=2,
+                                    log_file_path='./tests/test_data/pmtnet_omni_predict_log.txt')
     try:
-        pmtnet.validate(true_labels=true_labels,
-                        roc_plot_path='./tests/test_data/roc_plots.pdf')
+        pmtnet.validate(true_labels=true_labels)
         assert True
     except:
         assert False

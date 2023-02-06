@@ -13,7 +13,7 @@ import torch
 from tqdm import tqdm
 
 # Typing
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 # Subclasses
 from pMTnet_Omni.encoders.tcr_encoder_class import tcr_encoder_class
@@ -23,7 +23,7 @@ from pMTnet_Omni.encoders.pmhc_encoder_class import pmhc_encoder_class
 class encoder_class:
     def __init__(self,
                  encoder_data_dir: str,
-                 model_device: str = 'cpu',
+                 model_device: Union[str, torch.device],
                  vGdVAEacheckpoint_path: Optional[str] = None,
                  vGdVAEbcheckpoint_path: Optional[str] = None,
                  cdr3VAEacheckpoint_path: Optional[str] = None,
@@ -35,7 +35,7 @@ class encoder_class:
         ----------
         encoder_data_dir: str
             The directory containing data for encoders 
-        model_device: str
+        model_device: Union[str, torch.device]
             cpu or gpu
         vGdVAEacheckpoint_path: Optional[str]
             The path to VA the encoder
@@ -75,6 +75,8 @@ class encoder_class:
             self.mhc_dict[line] = encoder_data_dir + "mhc_dict/" + file_name
 
         # Load models
+        if isinstance(model_device, str):
+            model_device = torch.device(model_device)
         self.model_device = model_device
 
         # Initialize two encoders
@@ -133,7 +135,7 @@ class encoder_class:
                                                         aa_dict_atchley=self.aa_dict_atchley,
                                                         is_embedding=False,
                                                         verbose=verbose)
-            pmhc_columns = ["peptide", "mhca", "mhcb"]
+            pmhc_columns = ["peptide", "mhca", "mhcb","mhc_class", "mhcaseq", "mhcbseq", "mhca_use_seq", "mhcb_use_seq"]
             if all([name in df.columns for name in pmhc_columns]):
                 pmhc_embedding = self.pmhc_encoder.encode(df=df[pmhc_columns],
                                                           aa_dict_atchley=self.aa_dict_atchley,
