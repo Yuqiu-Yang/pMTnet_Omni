@@ -127,7 +127,6 @@ input will be elaborated upon.
 
 #. All incomplete data will be dropped 
 #. Make sure the sequences in the `peptide` column contain **less than** 30 amino acids
-#. Check all amino acids present in the sequences in `vaseq`, `vbseq`, `cdr3a`, `cdr3b`, and `peptide` are legitimate amino acids
 #. All MHCs have their corresponding ESM embeddings
 
 .. toctree::

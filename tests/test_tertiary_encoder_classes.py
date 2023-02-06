@@ -6,6 +6,7 @@ import csv
 import os
 from tqdm import tqdm
 
+from pMTnet_Omni.utilities import read_file
 from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
 from pMTnet_Omni.encoders.cdr3_alpha_encoder_model import cdr3VAEa
 from pMTnet_Omni.encoders.cdr3_beta_encoder_model import cdr3VAEb
@@ -32,7 +33,7 @@ for file_name in tqdm(mhc_files):
         line = f.readline()
     mhc_dict[line] = "./tests/test_data/data_for_encoders/mhc_dict/" + file_name
 
-test_df = pd.read_csv("./tests/test_data/test_df.csv")
+test_df = read_file("./tests/test_data/test_df.csv")
 
 #####################
 # CDR3A
