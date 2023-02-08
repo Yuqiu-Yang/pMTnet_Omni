@@ -158,6 +158,10 @@ def check_column_names(df: pd.DataFrame,
             mouse_df = mouse_df.merge(mouse_alpha_tcrs, on="vaseq", how='left')
         if ("va" not in diff_set) and ("vaseq" in diff_set):
             # if we have the name but we are missing the sequence
+            # We first curate the data a little bit
+            human_df['va'] = human_df['va'].str.replace(' ','').str.replace('.','-').str.replace(':', '*')
+            mouse_df['va'] = mouse_df['va'].str.replace(' ','').str.replace('.','-').str.replace(':', '*')
+            # Then we left merge 
             human_df = human_df.merge(human_alpha_tcrs, on="va", how='left')
             mouse_df = mouse_df.merge(mouse_alpha_tcrs, on="va", how='left')
         if ("vb" in diff_set) and ("vbseq" not in diff_set):
@@ -166,6 +170,9 @@ def check_column_names(df: pd.DataFrame,
             mouse_df = mouse_df.merge(mouse_beta_tcrs, on="vbseq", how='left')
         if ("vb" not in diff_set) and ("vbseq" in diff_set):
             # if we have the name but we are missing the sequence
+            human_df['vb'] = human_df['vb'].str.replace(' ','').str.replace('.','-').str.replace(':', '*')
+            mouse_df['vb'] = mouse_df['vb'].str.replace(' ','').str.replace('.','-').str.replace(':', '*')
+            # Then we left merge 
             human_df = human_df.merge(human_beta_tcrs, on="vb", how='left')
             mouse_df = mouse_df.merge(mouse_beta_tcrs, on="vb", how='left')
 
