@@ -231,6 +231,8 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
                 mhc_class.append('human class ii')
                 mhc_list = mhc.split('/')
                 mhcseq_list = mhcseq.split('/')
+                if len(mhcseq_list) == 1:
+                    mhcseq_list.append('')
                 if (len(mhc_list) == 1) and (mhc.startswith("DR")):
                     mhca.append("DRA*01:01")
                     mhcb.append(mhc)
@@ -240,7 +242,7 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
                     mhca.append(mhc_list[0])
                     mhcb.append(mhc_list[1])
                     mhcaseq.append(mhcseq_list[0])
-                    mhcbseq.append(mhcseq_list[len(mhcseq_list)-1])
+                    mhcbseq.append(mhcseq_list[1])
             else:
                 raise ValueError("Class of " + mhc + " can not be determined")
         elif pmhc_species == "mouse":
@@ -256,11 +258,14 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
             elif mhc.startswith(mouse_class_ii):
                 # For mouse Class II, alpha and beta
                 # will share the same mhc
+                mhcseq_list = mhcseq.split('/')
+                if len(mhcseq_list) == 1:
+                    mhcseq_list.append('')
                 mhc_class.append('mouse class ii')
                 mhca.append(mhc+"_alpha")
                 mhcb.append(mhc+"_beta")
-                mhcaseq.append(mhcseq)
-                mhcbseq.append(mhcseq)
+                mhcaseq.append(mhcseq_list[0])
+                mhcbseq.append(mhcseq_list[1])
             else:
                 raise ValueError("Class of " + mhc + " can not be determined")
         else:

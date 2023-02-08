@@ -26,7 +26,7 @@ For a more detailed exploration of our model, please refer to `our paper <https:
 
 Our GitHub repo can be found `here <https://github.com/Yuqiu-Yang/pMTnet_Omni>`_
 
-The supporting data as well as the online tool are hosted here `here <http://lce-test.biohpc.swmed.edu/pmtnet>`_
+The supporting data as well as the online tool are hosted on `DBAI <http://lce-test.biohpc.swmed.edu/pmtnet>`_
 
 Dependencies
 --------------
@@ -71,6 +71,7 @@ User Guide / Tutorial
    :maxdepth: 1
    :caption: Guided Tutorial
 
+   tutorial/input_check
    tutorial/details
 
 .. toctree::

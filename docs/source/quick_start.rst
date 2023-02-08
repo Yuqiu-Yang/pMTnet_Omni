@@ -76,7 +76,7 @@ a `.csv` file named `val_df_results_complete.csv`, whose content would look
 somewhat like this 
 
 .. image:: ./images/sample_output.png
-    :width: 600
+    :width: 700
     :align: center
 
 

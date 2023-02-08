@@ -149,4 +149,5 @@ dist/
 dist_conda/
 meta.yaml
 pmtnet_omni_predict_log.txt
-test_df_result.csv
+test_df_*
+test_plot.png

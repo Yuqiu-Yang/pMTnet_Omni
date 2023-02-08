@@ -128,9 +128,9 @@ def test_check_column_names_error_species(from_species, to_species):
 ])
 def test_get_mhc_class(input, expected):
     test_df = pd.read_csv("./tests/test_data/test_df.csv")
+    test_df['mhc'] = input
     df = check_column_names(test_df,
                             background_tcrs_dir="./tests/test_data/background_tcrs/")
-    df['mhc'] = input
     result_df = get_mhc_class(df=df)
     assert all(result_df["mhc_class"] == expected)
 
