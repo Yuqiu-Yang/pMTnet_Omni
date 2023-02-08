@@ -178,7 +178,7 @@ def test_check_data_sanity(mhc, peptide):
                             background_tcrs_dir="./tests/test_data/background_tcrs/")
     mhc_class = get_mhc_class(df=test_df)
     df = pd.concat([df, mhc_class], axis=1, ignore_index=False)
-    result_df = check_data_sanity(df=df,
+    result_df, _, _, _ = check_data_sanity(df=df,
                                   mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
     assert result_df.shape[0] == 3
 

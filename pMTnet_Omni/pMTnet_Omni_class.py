@@ -51,7 +51,7 @@ class pMTnet_Omni_class:
         elif isinstance(model_device, str):
             self.model_device = torch.device(model_device)
         else:
-            self.model_device = torch.device(model_device)
+            self.model_device = model_device
         
         encoder_path, classifier_path = check_data_dir_structure(data_dir)
 

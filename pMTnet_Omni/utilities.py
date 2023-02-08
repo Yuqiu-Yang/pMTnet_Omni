@@ -286,7 +286,7 @@ def get_mhc_class(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def check_data_sanity(df: pd.DataFrame,
-                      mhc_path: str = "./data/data_for_encoders/valid_mhc.txt") -> pd.DataFrame:
+                      mhc_path: str = "./data/data_for_encoders/valid_mhc.txt") -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Check the data sanity
     This function will check if the data format conforms to what our model expects
 
@@ -299,8 +299,10 @@ def check_data_sanity(df: pd.DataFrame,
 
     Returns
     ---------
-    df.DataFrame
-        A pandas dataframe containing curated pairing data
+    Tuple[df.DataFrame, df.DataFrame, df.DataFrame, df.DataFrame]
+        Four pandas dataframe containing curated pairing data,
+        pairs with peptides longer than 30,
+        problematic mhca, and problematic mhcb
     """
     print("Check data format...\n")
     # We drop NAs first
@@ -348,7 +350,7 @@ def check_data_sanity(df: pd.DataFrame,
     df['cdr3b'] = check_amino_acids(df["cdr3b"].to_frame())
     df['peptide'] = check_amino_acids(df["peptide"].to_frame())
 
-    return df
+    return df, df_antigen_dropped, df_mhc_alpha_dropped, df_mhc_beta_dropped
 
 
 def check_amino_acids(df_column: pd.DataFrame) -> pd.DataFrame:
@@ -410,7 +412,7 @@ def read_file(file_path: str,
     df = pd.concat([df, mhc_class], axis=1, ignore_index=False)
     df = df.drop(['mhc', 'mhcseq'], axis=1)
     # Perform some basic curation
-    df = check_data_sanity(df, mhc_path)
+    df, _, _, _ = check_data_sanity(df, mhc_path)
     return df
 
 
