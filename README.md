@@ -50,7 +50,7 @@ pip install pMTnet_Omni
 
 3. Say your dataset is under <i>./df.csv</i>. In your terminal, run 
 ```shell
-python -m pMTnet_Omni --data_dir "./data" --user_data_path "./df.csv" --output_file_path "./df_results.csv"
+python -m pMTnet_Omni --data_dir ./data --user_data_path ./df.csv --output_file_path ./df_results.csv
 ```
 
 4. An example output would look like this:
