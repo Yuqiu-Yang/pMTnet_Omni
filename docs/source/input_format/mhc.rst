@@ -38,13 +38,13 @@ string or use ``H-2-`` instead of ``H2-``.
 
     * - Input Examples 
       - Acceptable
-    * - HLA-A*01:01 HLA A*01:01 HLA- A*01:01 HLAA*01:01 A*01:01
+    * - HLA-A*01:01; HLA A*01:01; HLA- A*01:01; HLAA*01:01; A*01:01
       - Yes 
-    * - Human A*01:01 MHC-A*01:01
+    * - Human A*01:01; MHC-A*01:01
       - No
-    * - H2-Db H-2-Db H2 Db Db H2Db
+    * - H2-Db; H-2-Db; H2 Db; Db; H2Db
       - Yes 
-    * - Mouse-Db MHC-Db
+    * - Mouse-Db; MHC-Db
       - No 
 
 Details

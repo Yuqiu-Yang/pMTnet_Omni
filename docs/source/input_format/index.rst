@@ -125,8 +125,6 @@ conventions into consideration.
 In this section, the required format for all fields in the user 
 input will be elaborated upon. 
 
-#. All MHCs have their corresponding ESM embeddings
-
 .. toctree::
    :maxdepth: 1
    :caption: Amino Acids Sequences

@@ -51,7 +51,7 @@ these two columns instead of their names contained in ``va`` and ``vb`` columns.
     directly use the sequences with minimal data curation
 
 Therefore, it's vital to make sure that the format of 
-your input sequences conforms with ours. One such mismatches
+your input sequences conforms with ours. One such mismatch
 could happen when the users **truncate the CDR3 part of a sequence**.
 
 .. warning:: 

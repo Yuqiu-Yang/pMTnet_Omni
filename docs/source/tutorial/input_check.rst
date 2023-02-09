@@ -12,7 +12,11 @@ tell you "Rest assured. Everything looks fine :)"
     For this purpose, along with the main program, we also 
     published 5 datasets which you can find under 
     the ``./validation_data`` folder to help you check 
-    the input. 
+    the input manually. 
+
+    In this section, however, we will let you in how **pMTnet Omni**
+    curates data so that you will have a better idea of what 
+    is acceptable and what is not. 
 
     For the purpose of demonstration, we will forge a simple 
     dataset throughout this section. 
@@ -42,7 +46,7 @@ VA VB
     of ``*``. There is a typo: ``TRVB9:O1``. 
 
 Amino Acid Sequences 
-    There are unknown AA\: ``X``
+    There is an unknown AA\: ``X``
 
 MHC 
     There is a typo (actually two typos): ``S*99:01``
@@ -56,7 +60,6 @@ Column Names, VA, VB
 First thing first, we have to make sure that we have all the 
 columns we need. The ``check_column_names`` function contained 
 in the ``utilities`` module provides this functionality. 
-
 
 As a side product, we will also check 
 the names of the V segments on the Alpha chain and their 
@@ -105,7 +108,7 @@ the ``get_mhc_class`` function.
     mhc_df = get_mhc_class(df)
 
 When you run this piece of code, it should raise an exception saying 
-that "ValueError: Class of S*33:01 can not be determined". Therefore, 
+that "ValueError: Class of S*99:01 can not be determined". Therefore, 
 in the original dataframe, change the value to ``A*99:01``, which 
 still contains a typo. If we re-run the sequence, we see that this time 
 the ``get_mhc_class`` guessed that ``A*99:01`` is a ``human class i`` HLA. 
@@ -113,7 +116,7 @@ the ``get_mhc_class`` guessed that ``A*99:01`` is a ``human class i`` HLA.
 MHC and AA Sequences
 ------------------------
 However, ``A*99:01`` is not a known HLA. And we still have the 
-unknown AA ``X`` in our dataset. The ``check_data_sanity`` function 
+unknown AA: ``X`` in our dataset. The ``check_data_sanity`` function 
 is implemented as an attempt to address this problem. 
 
 .. code-block:: python 
