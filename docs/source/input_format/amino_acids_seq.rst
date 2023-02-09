@@ -30,11 +30,11 @@ accepted by **pMTnet Omni**.
 
 .. image:: ../images/CDR_letters.png
    :align: center
-   :width: 600 
+   :width: 300 
 
 .. note:: 
    If a letter in a provided sequence is not of the 20 amino acids
-   (this includes cases such as actual letters\: ``X``, 
+   (this includes cases such as unknown amnio acids\: ``X``, 
    white spaces\: :literal:`\ `, special characters\: ``_, +, /`` etc.),  
    it will first be replaced by ``_``. When converting to a matrix of 
    Atchley Factors, those ``_`` will be interpreted as ``0,0,0,0,0``.
@@ -80,8 +80,7 @@ We have already computed the ESM embeddings of around 20,000
 MHCs. A value (one or two sequences) in this column is used only when we can not find 
 the corresponding value in the ``mhc`` column in our database. 
 When this occurs, the ESM2 algorithm will be invoked to encode 
-the sequences. However, questions might rise when we have information 
-on both Alpha and Beta chains. Here we elaborate on the requirements we impose on the format 
+the sequences. Here we elaborate on the requirements we impose on the format 
 of MHC **amino acid sequences**. For the MHC names, please refer to 
 :doc:`mhc`. 
 
