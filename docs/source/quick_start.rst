@@ -36,7 +36,7 @@ If you are truly swamped, we recommend `our online tool <http://lce-test.biohpc.
 
 
 CLI (Command Line Interface)
------------------
+--------------------------------
 By using CLI, you only need one line of code. 
 
 .. code:: bash 
