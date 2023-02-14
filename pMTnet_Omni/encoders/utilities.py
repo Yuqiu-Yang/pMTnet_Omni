@@ -6,7 +6,6 @@ import numpy as np
 
 # PyTorch module
 import torch
-import esm 
 
 # User entertain 
 from tqdm import tqdm 
@@ -14,9 +13,7 @@ from tqdm import tqdm
 def esm_mapping(mhc: str,
                 mhc_dict: dict,
                 use_seq: bool,
-                mhcseq: str,
-                model=None,
-                batch_converter=None) -> np.ndarray:
+                mhcseq: str) -> np.ndarray:
     """Maps an MHC sequence to its ESM embedding
 
     Parameters
@@ -31,10 +28,6 @@ def esm_mapping(mhc: str,
         the corresponding encoding 
     mhcseq: str
         The MHC sequence 
-    model: 
-        The ESM2 model 
-    batch_converter:
-        The batch converter created from alphabet
     
     Returns
     ---------
@@ -44,11 +37,7 @@ def esm_mapping(mhc: str,
     """
     
     if use_seq:
-        data = [(mhc, mhcseq)]
-        _, _, batch_tokens = batch_converter(data)
-        with torch.no_grad():
-            results = model(batch_tokens, repr_layers=[33], return_contacts=True)
-        mhc_encoding = results["representations"][33].numpy()[0]
+        mhc_encoding = mhc_dict[mhcseq]
     else:
         mhc_encoding = torch.load(mhc_dict[mhc]).numpy()
         
@@ -80,12 +69,6 @@ def mhc_map(df: pd.DataFrame,
         The ESM embeddings of the given MHC sequences padded with 0s
 
     """
-    # Create the ESM2 model 
-    # This will download the model if this is the first time 
-    # Otherwise, we just load the model
-    model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-    batch_converter = alphabet.get_batch_converter()
-    model.eval()
     
     mhc_array = np.zeros((len(df), 1, 380, 1280), dtype=np.float32)
     mhc_seen = dict()
@@ -104,9 +87,7 @@ def mhc_map(df: pd.DataFrame,
             mhc_array[pos, 0] = esm_mapping(mhc=mhc,
                                             mhc_dict=mhc_dict,
                                             use_seq=use_seq,
-                                            mhcseq=mhcseq,
-                                            model=model,
-                                            batch_converter=batch_converter)
+                                            mhcseq=mhcseq)
             mhc_seen[mhc] = mhc_array[pos, 0]
     return mhc_array
 

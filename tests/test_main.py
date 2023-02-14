@@ -59,15 +59,15 @@ def test_parser_help(cmdarg):
         assert False
 
 
-@pytest.mark.parametrize("model_device, data_dir, seed, user_data_path,\
+@pytest.mark.parametrize("model_device, data_dir, seed, extra_mhc_dict, user_data_path,\
                         partition_size, compute_percentile_rank,rank_threshold,\
                         not_load_embedding, check_size, load_size, minibatch_size,\
                         log_file_path, output_file_path", [
-    ("cpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
-    ("gpu", './tests/test_data', None, './tests/test_data/test_df.csv', 2, True, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
-    ("cpu", './tests/test_data', 42, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
+    ("cpu", './tests/test_data', None, './tests/test_data/extra_mhc_dict.pickle', './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
+    ("gpu", './tests/test_data', None, './tests/test_data/extra_mhc_dict.pickle', './tests/test_data/test_df.csv', 2, True, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv"),
+    ("cpu", './tests/test_data', 42, None, './tests/test_data/test_df.csv', 2, False, 0.05, False, [10,20], 5, 5, None, "./tests/test_data/test_df_result.csv")
 ])
-def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, user_data_path,
+def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, extra_mhc_dict, user_data_path,
                         partition_size, compute_percentile_rank, rank_threshold, not_load_embedding,
                         check_size, load_size, minibatch_size, log_file_path,
                         output_file_path):
@@ -75,6 +75,7 @@ def test_pmtnet_omni_main(mocker, model_device, data_dir, seed, user_data_path,
     cmdargs.model_device = model_device
     cmdargs.data_dir = data_dir
     cmdargs.seed = seed
+    cmdargs.extra_mhc_dict = extra_mhc_dict
     cmdargs.user_data_path = user_data_path
     cmdargs.partition_size = partition_size
     cmdargs.compute_percentile_rank = compute_percentile_rank

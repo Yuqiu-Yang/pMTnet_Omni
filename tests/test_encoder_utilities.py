@@ -4,9 +4,9 @@ import numpy as np
 import csv
 import os
 from tqdm import tqdm
-import esm
+import torch
 
-from pMTnet_Omni.utilities import read_file
+from pMTnet_Omni_Document.data_curation import read_file
 from pMTnet_Omni.encoders.utilities import esm_mapping,\
     mhc_map,\
     aa_mapping,\
@@ -30,27 +30,24 @@ for file_name in tqdm(mhc_files):
     with open("./tests/test_data/data_for_encoders/name_dict/"+file_name) as f:
         line = f.readline()
     mhc_dict[line] = "./tests/test_data/data_for_encoders/mhc_dict/" + file_name
+mhc_dict["MAVMAPRTLLLLLSGALALTQTWAGSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQKMEPRAPWIEQEGPEYWDQETRNMKAHSQTDRANLGTLRGYYNQSEDGSHTIQIMYGCDVGPDGRFLRGYRQDAYDGKDYIALNEDLRSWTAADMAAQITKRKWEAVHAAEQRRVYLEGRCVDGLRRYLENGKETLQRTDPPKTHMTHHPISDHEATLRCWALGFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGEEQRYTCHVQHEGLPKPLTLRWELSSQPTIPIVGIIAGLVLLGAVITGAVVAAVMWRRKSSDRKGGSYTQAASSDSAQGSDVSLTACKV"] = \
+    torch.load(mhc_dict["A*03:01"]).numpy()
 
-model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-batch_converter = alphabet.get_batch_converter()
-model.eval()
 ###########################
 # mhc_map
 
 
-@pytest.mark.parametrize("mhc, mhc_dict, use_seq, mhcseq, model, batch_converter", [
-    ("A*03:01", mhc_dict, False, "", model, batch_converter),
-    ("A*01:01", mhc_dict, True, "MAVMAPRTLLLLLSGALALTQTWAGSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQKMEPRAPWIEQEGPEYWDQETRNMKAHSQTDRANLGTLRGYYNQSEDGSHTIQIMYGCDVGPDGRFLRGYRQDAYDGKDYIALNEDLRSWTAADMAAQITKRKWEAVHAAEQRRVYLEGRCVDGLRRYLENGKETLQRTDPPKTHMTHHPISDHEATLRCWALGFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGEEQRYTCHVQHEGLPKPLTLRWELSSQPTIPIVGIIAGLVLLGAVITGAVVAAVMWRRKSSDRKGGSYTQAASSDSAQGSDVSLTACKV", model, batch_converter),
+@pytest.mark.parametrize("mhc, mhc_dict, use_seq, mhcseq", [
+    ("A*03:01", mhc_dict, False, ""),
+    ("A*01:01", mhc_dict, True, "MAVMAPRTLLLLLSGALALTQTWAGSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQKMEPRAPWIEQEGPEYWDQETRNMKAHSQTDRANLGTLRGYYNQSEDGSHTIQIMYGCDVGPDGRFLRGYRQDAYDGKDYIALNEDLRSWTAADMAAQITKRKWEAVHAAEQRRVYLEGRCVDGLRRYLENGKETLQRTDPPKTHMTHHPISDHEATLRCWALGFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGEEQRYTCHVQHEGLPKPLTLRWELSSQPTIPIVGIIAGLVLLGAVITGAVVAAVMWRRKSSDRKGGSYTQAASSDSAQGSDVSLTACKV"),
 ])
-def test_esm_mapping(mhc, mhc_dict, use_seq, mhcseq, model, batch_converter):
+def test_esm_mapping(mhc, mhc_dict, use_seq, mhcseq):
     try:
 
         result = esm_mapping(mhc=mhc,
                              mhc_dict=mhc_dict,
                              use_seq=use_seq,
-                             mhcseq=mhcseq,
-                             model=model,
-                             batch_converter=batch_converter)
+                             mhcseq=mhcseq)
         assert True
     except:
         assert False
@@ -62,7 +59,7 @@ def test_esm_mapping(mhc, mhc_dict, use_seq, mhcseq, model, batch_converter):
 ])
 def test_mhc_map(column_name, mhc_dict, verbose):
     test_df = read_file("./tests/test_data/test_df.csv",
-                        background_tcr_dir='./tests/test_data/background_tcrs/',
+                        background_tcrs_dir='./tests/test_data/background_tcrs/',
                         mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
     try:
         result = mhc_map(df=test_df, column_name=column_name,

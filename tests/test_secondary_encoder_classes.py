@@ -5,7 +5,7 @@ import csv
 import os
 from tqdm import tqdm
 
-from pMTnet_Omni.utilities import read_file
+from pMTnet_Omni_Document.data_curation import read_file
 from pMTnet_Omni.encoders.pmhc_encoder_class import pmhc_encoder_class
 from pMTnet_Omni.encoders.tcr_encoder_class import tcr_encoder_class
 
@@ -29,7 +29,7 @@ for file_name in tqdm(mhc_files):
     mhc_dict[line] = "./tests/test_data/data_for_encoders/mhc_dict/" + file_name
 
 test_df = read_file("./tests/test_data/test_df.csv",
-                    background_tcr_dir='./tests/test_data/background_tcrs/',
+                    background_tcrs_dir='./tests/test_data/background_tcrs/',
                     mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
 
 

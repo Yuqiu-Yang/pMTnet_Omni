@@ -72,7 +72,7 @@ setup(
         'scikit-learn==1.0.2',
         'tqdm==4.64.1',
         'torch==1.13.1',
-        'fair-esm'
+        'pMTnet_Omni_Document',
     ],
     test_requires=[
         'pytest==7.1.2',

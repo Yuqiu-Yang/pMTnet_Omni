@@ -1,5 +1,6 @@
 # Data IO
 import os
+import pickle
 import pandas as pd
 from copy import deepcopy
 
@@ -24,14 +25,17 @@ from typing import Optional, Tuple, Union
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.classifier import pMHCTCR
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
-from pMTnet_Omni.utilities import read_file, batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
+from pMTnet_Omni_Document.data_curation import read_file
+# from pMTnet_Omni.data_curation import read_file
+from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
 
 
 class pMTnet_Omni_class:
     def __init__(self,
                  model_device: Optional[Union[str, torch.device]] = None,
                  data_dir: str = "./data/",
-                 seed: Optional[int] = None) -> None:
+                 seed: Optional[int] = None,
+                 extra_mhc_dict: Optional[Union[dict, str]] = None) -> None:
         """Initialize pMTnet_Omni_class object
 
         Parameters
@@ -42,6 +46,9 @@ class pMTnet_Omni_class:
             The directory containing data needed for model setups
         seed: Optional[int]
             The seed to be used 
+        extra_mhc_dict: Optional[Union[dict, str]] = None
+            A dictionary or a path to a .pickle file 
+            containing extra MHC embeddings  
 
         """
         # Set model device
@@ -60,7 +67,17 @@ class pMTnet_Omni_class:
         # Set seed
         if seed is not None:
             setup_seed(seed=seed)
-
+        # Read in extra mhc dictionary
+        self.extra_mhc_dict = None
+        # extra mhc is supposed to a dictioanry 
+        # whose keys are mhc sequences and 
+        # whose values are the corresponding esm embeddings 
+        if isinstance(extra_mhc_dict, dict):
+            self.extra_mhc_dict = extra_mhc_dict
+        if isinstance(extra_mhc_dict, str):
+            with open(extra_mhc_dict, "rb") as handle:
+                self.extra_mhc_dict = pickle.load(handle)
+        
         # User df & embeddings
         self.user_df_dict = {"complete": {},
                              "alpha missing": {},
@@ -85,7 +102,8 @@ class pMTnet_Omni_class:
                                      vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
                                      cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
                                      cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path,
-                                     pMHCcheckpoint_path=pMHCcheckpoint_path)
+                                     pMHCcheckpoint_path=pMHCcheckpoint_path,
+                                     extra_mhc_dict=self.extra_mhc_dict)
 
         # Initialize th clssifier model
         self.classifier_model = pMHCTCR().to(self.model_device)
@@ -103,27 +121,20 @@ class pMTnet_Omni_class:
 
     def read_user_df(self,
                      user_data_path: str,
-                     sep: str = ",",
-                     header: int = 0,
-                     partition_size=500) -> None:
+                     partition_size=500,
+                     **kwargs) -> None:
         """Read in user dataframe
 
         Parameters
         ----------
         user_data_path: str
             The path to the user dataframe 
-        sep: str
-            The sep argument used in pd.read_csv() function
-        header: int
-            The header used in pd.read_csv() function
-
 
         """
         user_df = read_file(file_path=user_data_path,
-                            sep=sep,
-                            header=header,
-                            background_tcr_dir=self.background_data_dir,
-                            mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"))
+                            background_tcrs_dir=self.background_data_dir,
+                            mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"),
+                            **kwargs)
         user_df['logit'] = np.inf
         self.user_df_dict['complete'] = partition_dataframe(
             df=user_df, partition_size=partition_size)

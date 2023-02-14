@@ -46,8 +46,10 @@ parser.add_argument(
     "--model_device", choices=["cpu", "gpu", "cuda:0"], default="cuda:0", help="Choose the model device")
 parser.add_argument("--data_dir", default="./data",
                     help="The data directory containing data necessary for model setups")
-parser.add_argument("--seed", type=int, nargs="?",
+parser.add_argument("--seed", type=int, nargs="?", default=None,
                     help="Seed for reproducibility")
+parser.add_argument("--extra_mhc_dict_path", nargs="?", default=None, 
+                    help="The path to the .pickle file containing extra MHC embeddings")
 
 # User input
 parser.add_argument("--user_data_path", help="The path the user data file")
@@ -116,7 +118,8 @@ def main(cmdargs: argparse.Namespace):
     # Initialize pmtnet
     pmtnet = pMTnet_Omni_class(model_device=model_device,
                                data_dir=cmdargs.data_dir,
-                               seed=cmdargs.seed)
+                               seed=cmdargs.seed,
+                               extra_mhc_dict=cmdargs.extra_mhc_dict_path)
 
     # Read user data file
     pmtnet.read_user_df(user_data_path=user_data_path,

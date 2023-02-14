@@ -4,19 +4,21 @@ import numpy as np
 
 from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
+extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
 
-@pytest.mark.parametrize("seed, partition_size, create_incomplete_data, expected", [
-    (42, 5, False, [1, 0, 0, 1]),
-    (None, 2, False, [2, 0, 0, 2]),
-    (42, 5, True, [1, 1, 1, 1]),
-    (None, 3, True, [2, 2, 2, 2])
+@pytest.mark.parametrize("seed, extra_mhc_dict, partition_size, create_incomplete_data, expected", [
+    (42, extra_mhc_dict, 5, False, [1, 0, 0, 1]),
+    (None, extra_mhc_dict, 2, False, [2, 0, 0, 2]),
+    (42, "./tests/test_data/extra_mhc_dict.pickle", 5, True, [1, 1, 1, 1]),
+    (None, "./tests/test_data/extra_mhc_dict.pickle", 3, True, [2, 2, 2, 2])
 ])
-def test_pMTnet_Omni_class_partitions(seed, partition_size, create_incomplete_data, expected):
+def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
     pmtnet = pMTnet_Omni_class(model_device=None,
                                data_dir="./tests/test_data/",
-                               seed=seed)
+                               seed=seed,
+                               extra_mhc_dict=extra_mhc_dict)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size)
+        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size, sep=',')
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()
@@ -35,7 +37,7 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
                                data_dir="./tests/test_data/",
                                seed=None)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size)
+        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size, sep=',')
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()
@@ -68,7 +70,7 @@ def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_per
                                data_dir="./tests/test_data/",
                                seed=None)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv')
+        user_data_path='./tests/test_data/test_df.csv', sep=',')
     try:
         pmtnet.predict(create_incomplete_data=create_incomplete_data,
                        compute_percentile_rank=compute_percentile_rank,
@@ -88,7 +90,7 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
                                data_dir="./tests/test_data/",
                                seed=None)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=5)
+        user_data_path='./tests/test_data/test_df.csv', partition_size=5, sep=',')
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()

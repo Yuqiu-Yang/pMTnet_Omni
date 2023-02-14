@@ -28,7 +28,8 @@ class encoder_class:
                  vGdVAEbcheckpoint_path: Optional[str] = None,
                  cdr3VAEacheckpoint_path: Optional[str] = None,
                  cdr3VAEbcheckpoint_path: Optional[str] = None,
-                 pMHCcheckpoint_path: Optional[str] = None) -> None:
+                 pMHCcheckpoint_path: Optional[str] = None,
+                 extra_mhc_dict: Optional[dict] = None) -> None:
         """The main encoder class 
 
         Parameters
@@ -47,6 +48,8 @@ class encoder_class:
             The path to CDR3 Beta encoder
         pMHCcheckpoint_path: Optional[str]
             The path to pMHC the encoder
+        extra_mhc_dict: Optional[dict] = None
+            A dictionary containing extra MHC embeddings  
         
         """
         # Build an amino acid dictionary
@@ -74,6 +77,9 @@ class encoder_class:
                 line = f.readline()
             self.mhc_dict[line] = encoder_data_dir + "mhc_dict/" + file_name
 
+        if extra_mhc_dict is not None:
+            self.mhc_dict = (self.mhc_dict | extra_mhc_dict)
+        
         # Load models
         if isinstance(model_device, str):
             model_device = torch.device(model_device)
