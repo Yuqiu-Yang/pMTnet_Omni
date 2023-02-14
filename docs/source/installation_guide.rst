@@ -1,6 +1,10 @@
 Installation Guide 
 ===================
 
+.. warning:: 
+  This package is NOT published on PyPI. We left this section here 
+  mainly for demonstration purposes.
+
 Dependencies
 -------------
 The dependencies of pMTnet Omni is fairly standard for a deep learning-based application
@@ -26,8 +30,6 @@ The dependencies of pMTnet Omni is fairly standard for a deep learning-based app
     - ``==4.64.1``
   * - torch
     - ``==1.13.1``
-  * - fair-esm
-    - ``==2.0.0``
 
 Environment Setup 
 ------------------

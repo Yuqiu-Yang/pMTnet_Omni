@@ -1,5 +1,11 @@
 Input Check 
 =================
+
+.. warning:: 
+  This section will mainly be updated on `pMTnet Omni Document <https://pmtnet-omni-document.readthedocs.io/en/latest/>`_.
+  Information here is already outdated. We will probably remove this in the future.   
+
+
 Being one of the meticulous (paranoid) ones, I myself 
 when using packages, sometime prefer to peek under the hood 
 just to make sure that the program is doing what I expect it 

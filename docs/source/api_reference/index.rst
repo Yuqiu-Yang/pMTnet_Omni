@@ -24,7 +24,6 @@ Here you will find all the details to our functions and classes.
     :caption: Supporting Modules 
 
     background_tcr_loaders
-    data_curation
     utilities
 
 

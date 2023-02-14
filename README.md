@@ -14,10 +14,12 @@
 
 Please refer to our paper for more details: [pMTnet Omni paper link here](www.google.com)
 
-We host the supporting data as well the online tool [here](http://lce-test.biohpc.swmed.edu/pmtnet), where you can find all the members of the pMTnet 
+We host the supporting data as well the online tool on [DBAI](http://lce-test.biohpc.swmed.edu/pmtnet), where you can find all the members of the pMTnet 
 family, including [pMTnet V1](https://github.com/tianshilu/pMTnet). 
 
-We have also built a detailed [online documentation](https://tao-wang-pmtnet-omni.readthedocs.io/en/latest/) where we walk you through every single step from installation to final affinity prediction. It also includes a step-by-step instruction on input format. 
+We have also built a detailed [online documentation](https://pmtnet-omni-document.readthedocs.io/en/latest/) where we walk you through every single step for data preparation. It also includes a step-by-step instruction on input format. 
+
+**_NOTE:_** We DO NOT have an online document for this repo. However, we do have HTML files for the documentation ready to go.
 
 ## Model Overview 
 ![Model Overview](/docs/source/images/overview.png)
@@ -29,7 +31,6 @@ We have also built a detailed [online documentation](https://tao-wang-pmtnet-omn
 - scikit-learn==1.0.2
 - tqdm==4.64.1
 - torch==1.13.1
-- fair-esm==2.0.0
 
 ## Enviroment Setup
 ```shell
@@ -49,21 +50,16 @@ pip install pMTnet_Omni
 
 2. Prepare your dataset so that it looks somewhat like the following:
 ![Sample df](/docs/source/images/sample_df.png)
-Along with the main program, we also published 5 datasets under the `./validation_data` folder. Feel free 
-to use those datasets to check if you TCR namings, Amino Acid sequences, and MHC namings conform with our 
-standard.
 
-**_NOTE:_** If the corresponding AA sequences are NOT provided AND the TCR names (same for MHC) can NOT be found in these datasets, the record WILL be dropped. 
+**_NOTE:_** We highly recommend using our supporting package [pMTnet_Omni_Document](https://github.com/Yuqiu-Yang/pMTnet_Omni_Document) to prepare your data. 
 
-3. Say your dataset is under <i>./df.csv</i>. In your terminal, run 
+
+3. Say your dataset is under `./df.csv` and the extra MHC dictionary is saved at `./extra_mhc_dict.pickle`. In your terminal, run 
 ```shell
-python -m pMTnet_Omni --data_dir ./data --user_data_path ./df.csv --output_file_path ./df_results.csv
+python -m pMTnet_Omni --data_dir ./data --user_data_path ./df.csv --extra_mhc_dict_path ./extra_mhc_dict.pickle --output_file_path ./df_results.csv
 ```
 
 4. An example output would look like this:
 ![Sample output](/docs/source/images/sample_output.png)
-
-For a more in-depth exploration including the usage of interactive Python, input format, and API reference, check out our [online documentation](https://tao-wang-pmtnet-omni.readthedocs.io/en/latest/). 
-
-## CITATION HERE 
+ 
 

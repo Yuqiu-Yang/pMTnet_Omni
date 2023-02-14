@@ -1,5 +1,10 @@
 Input File Format
 =======================
+
+.. warning:: 
+  This section will mainly be updated on `pMTnet Omni Document <https://pmtnet-omni-document.readthedocs.io/en/latest/>`_.
+  Information here will be outdated. We will probably remove this in the future.   
+
 Our algorithm is really powerful. However, it still has not possessed human intelligence yet.
 This unfortunately means that the input files need to conform with some certain format.
 
@@ -76,7 +81,7 @@ column names is necessary. Therefore, when reading the user input,
       - 
     * - mhc
       - The name(s) of the MHC
-      - Yes 
+      - No 
       - 
     * - mhcseq
       - The sequence(s) of amino acids of the corresponding ``mhc`` 

@@ -5,9 +5,13 @@
 
 .. image:: ../../assets/logo.png
    :width: 600
+   :align: center
 
 **pMTnet Omni**: your one-stop TCR-pMHC affinity prediction algorithm
 ===========================================================================
+
+.. warning:: 
+   This document is only for internal reference. 
 
 **pMTnet Omni** is a deep learning algorithm for affinity prediction based on 
 TCR Va, Vb, CDR3a, CDR3b sequences, peptide sequence, and MHC allele types.
@@ -38,10 +42,13 @@ Dependencies
 * scikit-learn==1.0.2
 * tqdm==4.64.1
 * torch==1.13.1
-* fair-esm==2.0.0
 
 Quick (but sloppy) Installation
 --------------------------------
+
+.. warning:: 
+   We will NOT publish this package on PyPI. Therefore, this won't 
+   work. We left it here mainly for demonstration purposes. 
 
 .. note:: 
    This will install *pMTnet_Omni* to your `base` environment. 
@@ -60,6 +67,7 @@ User Guide / Tutorial
 
    installation_guide
    quick_start
+   online_tool_guide
 
 .. toctree::
    :maxdepth: 3
