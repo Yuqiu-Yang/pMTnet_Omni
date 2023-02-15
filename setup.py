@@ -63,7 +63,7 @@ setup(
     author_email="yi.han@utsouthwestern.edu, yuqiuy@smu.edu, Tao.Wang@UTSouthwestern.edu",
     long_description_content_type="text/markdown",
     long_description=open("README.md").read(),
-    packages=["pMTnet_Omni", "pMTnet_Omni.encoders"],
+    packages=["pMTnet_Omni", "pMTnet_Omni.encoders", "pMTnet_Omni.models"],
     python_requires=">=3.9",
     install_requires=[
         'numpy==1.22.4',

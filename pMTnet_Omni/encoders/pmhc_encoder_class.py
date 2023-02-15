@@ -12,7 +12,11 @@ from tqdm import tqdm
 from typing import Optional, Union
 
 # Utilities and model
-from pMTnet_Omni.encoders.pmhc_encoder_model import pMHC
+try:
+    from pMTnet_Omni.models.pmhc_encoder_model import pMHC
+except ImportError:
+    from pMTnet_Omni.models.load_dummies import pMHC
+
 from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
 
 

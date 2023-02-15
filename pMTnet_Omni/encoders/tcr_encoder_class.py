@@ -9,10 +9,17 @@ import torch.nn.functional as F
 from typing import Optional, Union
 
 # Utilities and models
-from pMTnet_Omni.encoders.v_alpha_encoder_model import vGdVAEa
-from pMTnet_Omni.encoders.v_beta_encoder_model import vGdVAEb
-from pMTnet_Omni.encoders.cdr3_alpha_encoder_model import cdr3VAEa
-from pMTnet_Omni.encoders.cdr3_beta_encoder_model import cdr3VAEb
+try:
+    from pMTnet_Omni.models.v_alpha_encoder_model import vGdVAEa
+    from pMTnet_Omni.models.v_beta_encoder_model import vGdVAEb
+    from pMTnet_Omni.models.cdr3_alpha_encoder_model import cdr3VAEa
+    from pMTnet_Omni.models.cdr3_beta_encoder_model import cdr3VAEb
+except ImportError:
+    from pMTnet_Omni.models.load_dummies import vGdVAEa
+    from pMTnet_Omni.models.load_dummies import vGdVAEb
+    from pMTnet_Omni.models.load_dummies import cdr3VAEa
+    from pMTnet_Omni.models.load_dummies import cdr3VAEb
+
 from pMTnet_Omni.encoders.utilities import peptide_map
 
 

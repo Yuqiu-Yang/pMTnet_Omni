@@ -22,11 +22,13 @@ from contextlib import redirect_stdout
 from typing import Optional, Tuple, Union
 
 # pMTnet_Omni modules
+try:
+    from pMTnet_Omni.models.classifier import pMHCTCR
+except ImportError:
+    from pMTnet_Omni.models.load_dummies import pMHCTCR
 from pMTnet_Omni.encoders.encoder_class import encoder_class
-from pMTnet_Omni.classifier import pMHCTCR
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
 from pMTnet_Omni_Document.data_curation import read_file
-# from pMTnet_Omni.data_curation import read_file
 from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
 
 

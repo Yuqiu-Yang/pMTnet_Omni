@@ -8,7 +8,6 @@ Here you will find all the details to our functions and classes.
     
     main
     pMTnet_Omni_class 
-    classifier
 
 .. toctree::
     :maxdepth: 1
@@ -16,7 +15,6 @@ Here you will find all the details to our functions and classes.
     
     primary_encoder_class 
     secondary_encoder_class 
-    tertiary_encoder_class
     encoder_utilities
 
 .. toctree::
