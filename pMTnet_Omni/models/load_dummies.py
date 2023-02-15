@@ -6,7 +6,7 @@ import torch.nn as nn
 class vGdVAEa(nn.Module):
     def __init__(self):
         super().__init__()
-        self.mapping = nn.linear(100, 5)
+        self.mapping = nn.Linear(100, 5)
 
     def forward(self, x):
         x.squeeze_(dim=1)
@@ -17,7 +17,7 @@ class vGdVAEa(nn.Module):
 class vGdVAEb(nn.Module):
     def __init__(self):
         super().__init__()
-        self.mapping = nn.linear(100, 5)
+        self.mapping = nn.Linear(100, 5)
 
     def forward(self, x):
         x.squeeze_(dim=1)
