@@ -9,8 +9,8 @@ extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
 @pytest.mark.parametrize("seed, extra_mhc_dict, partition_size, create_incomplete_data, expected", [
     (42, extra_mhc_dict, 5, False, [1, 0, 0, 1]),
     (None, extra_mhc_dict, 2, False, [2, 0, 0, 2]),
-    (42, "./tests/test_data/extra_mhc_dict.pickle", 5, True, [1, 1, 1, 1]),
-    (None, "./tests/test_data/extra_mhc_dict.pickle", 3, True, [2, 2, 2, 2])
+    (42, "./tests/test_data/extra_mhc_dict.json", 5, True, [1, 1, 1, 1]),
+    (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [2, 2, 2, 2])
 ])
 def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
     pmtnet = pMTnet_Omni_class(model_device=None,

@@ -1,6 +1,6 @@
 # Data IO
 import os
-import pickle
+import json
 import pandas as pd
 from copy import deepcopy
 
@@ -49,7 +49,7 @@ class pMTnet_Omni_class:
         seed: Optional[int]
             The seed to be used 
         extra_mhc_dict: Optional[Union[dict, str]] = None
-            A dictionary or a path to a .pickle file 
+            A dictionary or a path to a .json file 
             containing extra MHC embeddings  
 
         """
@@ -77,8 +77,9 @@ class pMTnet_Omni_class:
         if isinstance(extra_mhc_dict, dict):
             self.extra_mhc_dict = extra_mhc_dict
         if isinstance(extra_mhc_dict, str):
-            with open(extra_mhc_dict, "rb") as handle:
-                self.extra_mhc_dict = pickle.load(handle)
+            with open(extra_mhc_dict, "r") as handle:
+                temp_dict = json.load(handle)
+            self.extra_mhc_dict = {k: np.asarray(v) for k, v in temp_dict.items()}
         
         # User df & embeddings
         self.user_df_dict = {"complete": {},
