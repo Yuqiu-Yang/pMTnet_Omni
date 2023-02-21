@@ -37,7 +37,7 @@ Step 1: Instantiate a **pMTnet_Omni_class** Object
       - This should be set to the data directory on the server. 
     * - extra_mhc_dict
       - ``str``
-      - A string ends in `.pickle`
+      - A string ends in `.json`
       - None
       - No
       - Users will upload this file, and we will set this for them. 

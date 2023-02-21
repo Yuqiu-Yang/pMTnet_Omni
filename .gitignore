@@ -150,11 +150,11 @@ dist_conda/
 meta.yaml
 
 # 
-pMTnet_Omni/tests/test_data/*
+tests/test_data/*
 
-!pMTnet_Omni/tests/test_data/test_df.csv
+!tests/test_data/test_df.csv
 
-!pMTnet_Omni/tests/test_data/extra_mhc_dict.json
+!tests/test_data/extra_mhc_dict.json
 
 #
 pMTnet_Omni/models/*
