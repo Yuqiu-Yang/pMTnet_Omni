@@ -77,16 +77,18 @@ class pMHCTCR(nn.Module):
         self.mapping = nn.Linear(100, 1)
 
     def forward(self,
-                pmhctcr: torch.tensor) -> torch.tensor:
+                pmhc_embedding: torch.tensor,
+                tcr_embedding: torch.tensor) -> torch.tensor:
 
-        logits = self.mapping(pmhctcr)
+        logits = self.mapping(torch.cat((pmhc_embedding, tcr_embedding), dim=1))
         return logits
 
     def predict(self,
-                pmhctcr: torch.tensor) -> np.ndarray:
+                pmhc_embedding: torch.tensor,
+                tcr_embedding: torch.tensor) -> np.ndarray:
         self.eval()
         with torch.no_grad():
-            logits = self.mapping(pmhctcr)
+            logits = self.mapping(torch.cat((pmhc_embedding, tcr_embedding), dim=1))
             return logits.to("cpu").numpy()
 
 
