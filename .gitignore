@@ -157,8 +157,8 @@ tests/test_data/*
 !tests/test_data/extra_mhc_dict.json
 
 #
-pMTnet_Omni/models/*
+models/*
 
-!pMTnet_Omni/models/__init__.py
+!models/__init__.py
 
-!pMTnet_Omni/models/load_dummies.py
+!models/load_dummies.py

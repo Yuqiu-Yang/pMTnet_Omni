@@ -1,7 +1,8 @@
-import numpy as np 
+import numpy as np
 # PyTorch module
 import torch
 import torch.nn as nn
+
 
 class vGdVAEa(nn.Module):
     def __init__(self):
@@ -10,9 +11,10 @@ class vGdVAEa(nn.Module):
 
     def forward(self, x):
         x.squeeze_(dim=1)
-        x=torch.sum(x, dim=2)
-        encoded=self.mapping(x)
+        x = torch.sum(x, dim=2)
+        encoded = self.mapping(x)
         return encoded, encoded, encoded, encoded
+
 
 class vGdVAEb(nn.Module):
     def __init__(self):
@@ -21,9 +23,10 @@ class vGdVAEb(nn.Module):
 
     def forward(self, x):
         x.squeeze_(dim=1)
-        x=torch.sum(x, dim=2)
-        encoded=self.mapping(x)
+        x = torch.sum(x, dim=2)
+        encoded = self.mapping(x)
         return encoded, encoded, encoded, encoded
+
 
 class cdr3VAEa(nn.Module):
     def __init__(self):
@@ -32,9 +35,10 @@ class cdr3VAEa(nn.Module):
 
     def forward(self, x):
         x.squeeze_(dim=1)
-        x=torch.sum(x, dim=2)
-        encoded=self.mapping(x)
+        x = torch.sum(x, dim=2)
+        encoded = self.mapping(x)
         return encoded, encoded, encoded, encoded
+
 
 class cdr3VAEb(nn.Module):
     def __init__(self):
@@ -43,9 +47,10 @@ class cdr3VAEb(nn.Module):
 
     def forward(self, x):
         x.squeeze_(dim=1)
-        x=torch.sum(x, dim=2)
-        encoded=self.mapping(x)
+        x = torch.sum(x, dim=2)
+        encoded = self.mapping(x)
         return encoded, encoded, encoded, encoded
+
 
 class pMHC(nn.Module):
     def __init__(self):
@@ -54,15 +59,15 @@ class pMHC(nn.Module):
 
     def forward(self, x_p, x_a, x_b):
         x_p.squeeze_(dim=1)
-        x_p=torch.sum(x_p, dim=2)
+        x_p = torch.sum(x_p, dim=2)
         x_a.squeeze_(dim=1)
-        x_a=torch.sum(x_a, dim=2)
+        x_a = torch.sum(x_a, dim=2)
         x_b.squeeze_(dim=1)
-        x_b=torch.sum(x_b, dim=2)
-        
-        x=torch.cat((x_p, x_a, x_b), dim=1)
-        encoded_act=self.mapping(x)
-        
+        x_b = torch.sum(x_b, dim=2)
+
+        x = torch.cat((x_p, x_a, x_b), dim=1)
+        encoded_act = self.mapping(x)
+
         return encoded_act, encoded_act
 
 
@@ -73,7 +78,7 @@ class pMHCTCR(nn.Module):
 
     def forward(self,
                 pmhctcr: torch.tensor) -> torch.tensor:
-        
+
         logits = self.mapping(pmhctcr)
         return logits
 
@@ -89,10 +94,10 @@ class ensemble_pMHCTCR:
     def __init__(self,
                  model_device=None,
                  classifier_path=[None]) -> None:
-        
-        # Initialize each model 
+
+        # Initialize each model
         self.model_list = [pMHCTCR() for _ in range(1)]
-        
+
     def predict(self,
                 pmhc_embedding: torch.tensor,
                 tcr_embedding: torch.tensor) -> np.ndarray:
