@@ -384,7 +384,7 @@ def test_dict_to_dir(path):
 ])
 def test_check_data_dir_structure(path):
     encoder_path, classifier_path = check_data_dir_structure(path=path)
-    assert all([x is None for x in encoder_path]) and (classifier_path is None)
+    assert all([x is None for x in encoder_path]) and all([x is None for x in classifier_path])
 
 
 @pytest.mark.parametrize("path", [

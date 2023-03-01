@@ -23,9 +23,9 @@ from typing import Optional, Tuple, Union
 
 # pMTnet_Omni modules
 try:
-    from pMTnet_Omni.models.classifier import pMHCTCR
+    from pMTnet_Omni.models.classifier import ensemble_pMHCTCR
 except ImportError:
-    from pMTnet_Omni.models.load_dummies import pMHCTCR
+    from pMTnet_Omni.models.load_dummies import ensemble_pMHCTCR
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
 from pMTnet_Omni_Document.data_curation import read_file
@@ -109,18 +109,9 @@ class pMTnet_Omni_class:
                                      extra_mhc_dict=self.extra_mhc_dict)
 
         # Initialize th clssifier model
-        self.classifier_model = pMHCTCR().to(self.model_device)
-        classifier_checkpoint_path = classifier_path
-
-        # Load the model
-        print("Attempt to load the classifier model\n")
-        if classifier_checkpoint_path is not None:
-            classifier_checkpoint = torch.load(
-                classifier_checkpoint_path, map_location=self.model_device)
-            self.classifier_model.load_state_dict(classifier_checkpoint['net'])
-            print("Success\n")
-        else:
-            print("Check point is not provided. Use random weights\n")
+        self.classifier_model = ensemble_pMHCTCR(model_device=self.model_device,
+                                                classifier_path=classifier_path)
+        self.ensemble_size = len(classifier_path)
 
     def read_user_df(self,
                      user_data_path: str,
@@ -138,7 +129,9 @@ class pMTnet_Omni_class:
                             background_tcrs_dir=self.background_data_dir,
                             mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"),
                             **kwargs)
-        user_df['logit'] = np.inf
+        for id in range(self.ensemble_size):
+            user_df['logit_m_'+str(id)] = np.inf
+        user_df['logit'] = np.inf 
         self.user_df_dict['complete'] = partition_dataframe(
             df=user_df, partition_size=partition_size)
 
@@ -216,11 +209,13 @@ class pMTnet_Omni_class:
                 continue
             for partition in self.user_df_dict[missingness]:
                 df_output = self.classifier_model.predict(
-                    torch.cat((self.user_pmhc_embedding_dict['complete'][partition],
-                               self.user_tcr_embedding_dict[missingness][partition]), dim=1).to(self.model_device)
-                )
-                self.user_df_dict[missingness][partition]['logit'] = df_output
-
+                    pmhc_embedding=self.user_pmhc_embedding_dict['complete'][partition].to(self.model_device),
+                    tcr_embedding=self.user_tcr_embedding_dict[missingness][partition].to(self.model_device))
+                for id in range(self.ensemble_size):
+                    self.user_df_dict[missingness][partition]['logit_m_'+str(id)] = df_output[:,id]
+                self.user_df_dict[missingness][partition]['logit'] = np.mean(df_output, axis=1)
+                
+                
     def _generate_background_dataloader(self,
                                         load_embedding: bool,
                                         replacement: bool,
@@ -282,7 +277,8 @@ class pMTnet_Omni_class:
                                  check_size: list = [1000, 10000, 100000],
                                  load_size: int = 1000000,
                                  minibatch_size: int = 50000,
-                                 log_file_path: Optional[str] = None) -> None:
+                                 log_file_path: Optional[str] = None,
+                                 model_id: int=0) -> None:
         """Compute the rank percentiles 
 
         Parameters
@@ -303,6 +299,8 @@ class pMTnet_Omni_class:
             The number of background tcrs to be sampled each time a dataloader is called
         log_file_path: Optional[str]
             The file path to save the output log file
+        model_id: int
+            The id of the model in the ensemble 
 
         """
         if log_file_path is None:
@@ -314,6 +312,7 @@ class pMTnet_Omni_class:
         with open(log_file_path, 'w') as f:
             with redirect_stdout(f):
                 # Make sure check size is in an ascending order
+                print("Model "+str(model_id)+"... \n")
                 check_size = np.sort(check_size)
                 for b in range(B):
                     print("Starting trial "+str(b+1) +
@@ -329,8 +328,8 @@ class pMTnet_Omni_class:
                             continue
                         for partition in self.user_df_dict[missingness]:
                             n_rows = self.user_df_dict[missingness][partition].shape[0]
-                            self.user_df_dict[missingness][partition]["percentile_rank_" +
-                                                                      str(b)] = np.inf
+                            self.user_df_dict[missingness][partition]["percentile_rank_m_" + str(model_id) +
+                                                                      "_"+str(b)] = np.inf
                             tcr_species_df = self.user_df_dict[missingness][partition]["tcr_species"].to_frame(
                             )
 
@@ -342,6 +341,7 @@ class pMTnet_Omni_class:
                                     data_loader = background_mouse_dataloader
                                 print(
                                     self.user_df_dict[missingness][partition].iloc[[row], :])
+                                
                                 check_size_ind = 0
                                 user_output_position = 0
                                 b_size_so_far = 0
@@ -351,7 +351,7 @@ class pMTnet_Omni_class:
                                     print(
                                         "Verifying using "+str(check_size[check_size_ind]) + " background tcrs\n")
                                     print("\tLoading minibatch of " +
-                                          str(tcrs.shape[0]) + " tcrs\n")
+                                        str(tcrs.shape[0]) + " tcrs\n")
                                     #####################################
                                     # DEPENDING ON WHETHER THE USER WANTS TO LOAD EMBEDDING OR NOT
                                     # THIS PART OF THE CODE WILL CHANGE
@@ -363,29 +363,29 @@ class pMTnet_Omni_class:
                                     )
                                     #####################################
                                     print("\tPredicting background tcrs\n")
-                                    background_result = self.classifier_model.predict(
-                                        torch.cat((duplicated_pmhc_embedding.to(self.model_device), background_tcr_embedding), dim=1))
+                                    background_result = self.classifier_model.model_list[model_id].predict(
+                                        pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
+                                        tcr_embedding=background_tcr_embedding)
                                     # Compute how many backgrounds are "better" than user output
                                     # Therefore, the closer the value is to 0
                                     # the more likely that the model thinks the pair will bind
                                     current_position = np.sum(
-                                        background_result > self.user_df_dict[missingness][partition]['logit'][row])
+                                        background_result > self.user_df_dict[missingness][partition]['logit_m_'+str(model_id)][row])
                                     print("\tRank in the current minibatch is " +
-                                          str(current_position+1)+"th out of "+str(b_size+1)+"\n")
+                                        str(current_position+1)+"th out of "+str(b_size+1)+"\n")
                                     user_output_position += current_position
                                     print("\tRank in the current batch so far is " +
-                                          str(user_output_position+1)+"th out of "+str(b_size_so_far+1)+"\n")
+                                        str(user_output_position+1)+"th out of "+str(b_size_so_far+1)+"\n")
                                     if batch_finished_indicator[batch_size_ind]:
-                                        rank_percentile = user_output_position / \
-                                            (check_size[check_size_ind]+1)
+                                        rank_percentile = user_output_position / (check_size[check_size_ind]+1)
                                         print("\tCurrent batch is done. The final position is "+str(
                                             user_output_position+1)+" out of "+str(check_size[check_size_ind]+1)+"\n")
                                         if (rank_percentile > rank_threshold) or (b_size == np.max(batch_size)):
                                             # If the threshold is 0.03 and the rank_percentile
                                             # is greater than that, this means that more than
                                             # 3% of the background is 'better'
-                                            self.user_df_dict[missingness][partition].at[row, 'percentile_rank_'+str(
-                                                b)] = rank_percentile
+                                            self.user_df_dict[missingness][partition].at[row, 'percentile_rank_m_'+
+                                                                                         str(model_id)+"_"+str(b)] = rank_percentile
                                             break
                                         user_output_position = 0
                                         b_size_so_far = 0
@@ -473,16 +473,30 @@ class pMTnet_Omni_class:
         self._encode_user_df(verbose=verbose)
         if create_incomplete_data:
             self._create_incomplete_data()
+        # Compute logit for each model in the ensemble 
+        # This should also output the average logit over the ensemble
         self._get_user_df_output()
         if compute_percentile_rank:
-            self._compute_percentile_rank(rank_threshold=rank_threshold,
-                                          B=B,
-                                          load_embedding=load_embedding,
-                                          replacement=replacement,
-                                          check_size=check_size,
-                                          load_size=load_size,
-                                          minibatch_size=minibatch_size,
-                                          log_file_path=log_file_path)
+            # For each model in the ensemble, we compute the percentile rank
+            for id in range(self.ensemble_size):
+                self._compute_percentile_rank(rank_threshold=rank_threshold,
+                                            B=B,
+                                            load_embedding=load_embedding,
+                                            replacement=replacement,
+                                            check_size=check_size,
+                                            load_size=load_size,
+                                            minibatch_size=minibatch_size,
+                                            log_file_path=log_file_path,
+                                            model_id=id)
+            # We average the percentile ranks 
+            for b in range(B):
+                for missingness in self.user_df_dict:
+                    if len(self.user_df_dict[missingness]) == 0:
+                        continue
+                    for partition in self.user_df_dict[missingness]:
+                        col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(self.ensemble_size)]
+                        self.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = self.user_df_dict[missingness][partition][col_names].mean(axis=1)
+            
         if output_file_path is not None:
             filename, _ = os.path.splitext(output_file_path)
             df_dict, _, _ = self._amalgamate()

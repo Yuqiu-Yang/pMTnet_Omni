@@ -48,10 +48,11 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
                                     check_size=[5, 10],
                                     load_size=5,
                                     minibatch_size=2,
-                                    log_file_path=None)
+                                    log_file_path=None,
+                                    model_id=0)
     df_dict, tcr_dict, pmhc_dict = pmtnet._amalgamate()
-    assert ("percentile_rank_0" in df_dict['complete'].columns) and\
-        ("percentile_rank_1" in df_dict['complete'].columns) and\
+    assert ("percentile_rank_m_0_0" in df_dict['complete'].columns) and\
+        ("percentile_rank_m_0_1" in df_dict['complete'].columns) and\
         (df_dict['complete'].shape[0] == 4) and\
         (tcr_dict['complete'].shape[1] == 70) and\
         (pmhc_dict['complete'].shape[1] == 30) and\
@@ -101,7 +102,15 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
                                     check_size=[5, 10],
                                     load_size=5,
                                     minibatch_size=2,
-                                    log_file_path='./tests/test_data/pmtnet_omni_predict_log.txt')
+                                    log_file_path='./tests/test_data/pmtnet_omni_predict_log.txt',
+                                    model_id=0)
+    for b in range(1):
+        for missingness in pmtnet.user_df_dict:
+            if len(pmtnet.user_df_dict[missingness]) == 0:
+                continue
+            for partition in pmtnet.user_df_dict[missingness]:
+                col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
+                pmtnet.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][partition][col_names].mean(axis=1)
     try:
         pmtnet.validate(true_labels=true_labels)
         assert True

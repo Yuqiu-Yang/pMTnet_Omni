@@ -210,5 +210,5 @@ class tcr_encoder_class:
                                                         verbose=verbose))
 
         tcr_embedding = torch.cat(
-            (va_embedding, vb_embedding, cdr3a_embedding, cdr3b_embedding), dim=1)
+            (va_embedding, cdr3a_embedding, vb_embedding, cdr3b_embedding), dim=1)
         return tcr_embedding

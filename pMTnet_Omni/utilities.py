@@ -150,6 +150,9 @@ def plot_validation_curve(result_dicts: dict,
     plt.xticks(fontsize=45)
     plt.yticks(fontsize=45)
 
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    
     plt.legend(loc=legend_pos, fontsize=55)
     plt.tight_layout()
     
@@ -315,7 +318,7 @@ def path_to_dict(path: str,
     return d
 
 
-def check_data_dir_structure(path: str) -> Tuple[list, str]:
+def check_data_dir_structure(path: str) -> Tuple[list, list]:
     """Check if the given directory satisfies the requirements for a data directory
 
     Parameters
@@ -325,7 +328,7 @@ def check_data_dir_structure(path: str) -> Tuple[list, str]:
 
     Returns
     ---------
-    Tuple[list, str]
+    Tuple[list, list]
         File paths for encoders and the classifier model
 
 
@@ -348,7 +351,7 @@ def check_data_dir_structure(path: str) -> Tuple[list, str]:
                                                                                           "cdr3_alpha_encoder.pth",
                                                                                            "cdr3_beta_encoder.pth",
                                                                                            "pmhc_encoder.pth"])},
-                                       "classifier_model_weights": {'dirs': {}, 'files': set(["classifier.pth"])}},
+                                       "classifier_model_weights": {'dirs': {}, 'files': set(["classifier*.pth"])}},
                               "files": set()}
     if (not set(required_dir_structure['dirs'].keys()).issubset(set(user_data_dir_dict['dirs'].keys()))) or \
         (not required_dir_structure['dirs']['background_tcrs']['files'].issubset(user_data_dir_dict['dirs']['background_tcrs']['files'])) or \
@@ -368,12 +371,15 @@ def check_data_dir_structure(path: str) -> Tuple[list, str]:
             encoder_path.append(None)
         else:
             encoder_path.append(os.path.join(path, "encoder_model_weights", m))
-
-    if "classifier.pth" not in user_data_dir_dict['dirs']['classifier_model_weights']['files']:
+    
+    classifier_path = []
+    for m in user_data_dir_dict['dirs']['classifier_model_weights']['files']:
+        if m.startswith("classifier") and m.endswith(".pth"):
+            c_path = os.path.join(path, "classifier_model_weights", m)
+            classifier_path.append(c_path)
+    if len(classifier_path) == 0:
         warnings.warn("classifier.pth" +
                       " can not be found. Will use random weights.\n")
-        classifier_path = None
-    else:
-        classifier_path = os.path.join(
-            path, "classifier_model_weights/classifier.pth")
+        classifier_path.append(None)
+                
     return encoder_path, classifier_path

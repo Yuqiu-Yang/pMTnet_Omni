@@ -83,3 +83,22 @@ class pMHCTCR(nn.Module):
         with torch.no_grad():
             logits = self.mapping(pmhctcr)
             return logits.to("cpu").numpy()
+
+
+class ensemble_pMHCTCR:
+    def __init__(self,
+                 model_device=None,
+                 classifier_path=[None]) -> None:
+        
+        # Initialize each model 
+        self.model_list = [pMHCTCR() for _ in range(1)]
+        
+    def predict(self,
+                pmhc_embedding: torch.tensor,
+                tcr_embedding: torch.tensor) -> np.ndarray:
+        results = np.zeros((pmhc_embedding.shape[0], 1))
+        for i in range(1):
+            logits = self.model_list[i].predict(pmhc_embedding=pmhc_embedding,
+                                                tcr_embedding=tcr_embedding)
+            results[:, i] = logits
+        return results
