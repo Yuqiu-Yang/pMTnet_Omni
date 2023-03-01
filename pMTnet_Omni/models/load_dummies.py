@@ -107,5 +107,5 @@ class ensemble_pMHCTCR:
         for i in range(1):
             logits = self.model_list[i].predict(pmhc_embedding=pmhc_embedding,
                                                 tcr_embedding=tcr_embedding)
-            results[:, i] = logits
+            results[:, [i]] = logits.reshape(-1,1)
         return results
