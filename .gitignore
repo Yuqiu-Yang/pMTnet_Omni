@@ -152,6 +152,11 @@ meta.yaml
 # 
 tests/test_data/*
 
+!tests/test_data/background_tcrs
+!tests/test_data/classifier_model_weights
+!tests/test_data/data_for_encoders
+!tests/test_data/encoder_model_weights
+
 !tests/test_data/test_df.csv
 
 !tests/test_data/df_curated.csv
