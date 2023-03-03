@@ -71,14 +71,14 @@ setup(
         'matplotlib==3.6.2',
         'scikit-learn==1.0.2',
         'tqdm==4.64.1',
-        'torch==1.13.1',
-        'pMTnet_Omni_Document',
+        'torch==1.13.1'
     ],
     test_requires=[
         'pytest==7.1.2',
         'coverage==6.3.2',
         'pytest-cov==3.0.0',
-        'pytest-mock==3.10.0'
+        'pytest-mock==3.10.0',
+        'pMTnet_Omni_Document'
     ],
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",

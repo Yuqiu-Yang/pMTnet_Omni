@@ -28,7 +28,7 @@ except ImportError:
     from pMTnet_Omni.models.load_dummies import ensemble_pMHCTCR
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
-from pMTnet_Omni_Document.data_curation import read_file
+# from pMTnet_Omni_Document.data_curation import read_file
 from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
 
 
@@ -79,6 +79,9 @@ class pMTnet_Omni_class:
         if isinstance(extra_mhc_dict, str):
             with open(extra_mhc_dict, "r") as handle:
                 temp_dict = json.load(handle)
+            # We convert nested list to np.ndarray
+            # Note that even if the dictionary is {}
+            # this will give us {}
             self.extra_mhc_dict = {k: np.asarray(v) for k, v in temp_dict.items()}
         
         # User df & embeddings
@@ -113,22 +116,37 @@ class pMTnet_Omni_class:
                                                 classifier_path=classifier_path)
         self.ensemble_size = len(classifier_path)
 
-    def read_user_df(self,
-                     user_data_path: str,
-                     partition_size=500,
-                     **kwargs) -> None:
+    def _read_user_df(self,
+                      user_data: Union[str, pd.DataFrame],
+                      partition_size: int=500,
+                      **kwargs) -> None:
         """Read in user dataframe
 
         Parameters
         ----------
-        user_data_path: str
-            The path to the user dataframe 
+        user_data: str, pd.DataFrame
+            The path to the user dataframe or the actual dataframe
+        partition_size: int 
+            Size of each partition. Used to save GPU memory.
+        **kwargs
+            Other key-value pairs for the pd.read_csv function
 
         """
-        user_df = read_file(file_path=user_data_path,
-                            background_tcrs_dir=self.background_data_dir,
-                            mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"),
-                            **kwargs)
+        if isinstance(user_data, str):
+            # if the path is provided 
+            # we use pd.read_csv to read the data 
+            # NOTE: WE WILL NOT CHECK THE DATA 
+            # THIS SHOULD BE DONE VIA data_curation
+            user_df = pd.read_csv(user_data, **kwargs)
+        elif isinstance(user_data, pd.DataFrame):
+            user_df = deepcopy(user_data)
+            # user_df = read_file(file_path=user_data,
+            #                     background_tcrs_dir=self.background_data_dir,
+            #                     mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"),
+            #                     **kwargs)
+        else:
+            raise TypeError("user_data should either the path to the file or a pd.DataFrame")
+        
         for id in range(self.ensemble_size):
             user_df['logit_m_'+str(id)] = np.inf
         user_df['logit'] = np.inf 
@@ -308,7 +326,10 @@ class pMTnet_Omni_class:
             print("Log file will NOT be saved as no path is specified.\n")
         elif os.path.splitext(log_file_path)[1] != ".txt":
             raise Exception("Only .txt file is used for the log file.\n")
-
+        else:
+            temp = os.path.splitext(log_file_path)
+            log_file_path = temp[0] + "_" + str(model_id) + temp[1]
+        
         with open(log_file_path, 'w') as f:
             with redirect_stdout(f):
                 # Make sure check size is in an ascending order
@@ -426,8 +447,32 @@ class pMTnet_Omni_class:
 
         return df_dict, tcr_dict, pmhc_dict
 
+    
+    def read_user_df(self,
+                     user_data: Union[str, pd.DataFrame],
+                     partition_size: int=500,
+                     verbose: bool = True,
+                     **kwargs) -> None:
+        """Read in user dataframe
+
+        Parameters
+        ----------
+        user_data: str, pd.DataFrame
+            The path to the user dataframe or the actual dataframe
+        partition_size: int 
+            Size of each partition. Used to save GPU memory.
+        verbose: bool
+            Whether or not to print out model process 
+        **kwargs
+            Other key-value pairs for the pd.read_csv function
+        
+        """ 
+        self._read_user_df(user_data=user_data,
+                           partition_size=partition_size,
+                           **kwargs)
+        self._encode_user_df(verbose=verbose)
+        
     def predict(self,
-                verbose: bool = True,
                 create_incomplete_data: bool = False,
                 compute_percentile_rank: bool = True,
                 output_file_path: Optional[str] = None,
@@ -443,8 +488,6 @@ class pMTnet_Omni_class:
 
         Parameters
         ----------
-        verbose: bool
-            Whether or not to print out model process 
         create_incomplete_data: bool
             Whether or not to create alpha missing and beta missing data. True only when doing validation 
         compute_percentile_rank: bool
@@ -470,15 +513,17 @@ class pMTnet_Omni_class:
 
         """
 
-        self._encode_user_df(verbose=verbose)
         if create_incomplete_data:
             self._create_incomplete_data()
         # Compute logit for each model in the ensemble 
         # This should also output the average logit over the ensemble
+        print("Getting raw affinity scores...\n")
         self._get_user_df_output()
+        print("Done.\n")
         if compute_percentile_rank:
             # For each model in the ensemble, we compute the percentile rank
-            for id in range(self.ensemble_size):
+            print("Computing percentile ranks for each model in the ensemble\n")
+            for id in tqdm(range(self.ensemble_size)):
                 self._compute_percentile_rank(rank_threshold=rank_threshold,
                                             B=B,
                                             load_embedding=load_embedding,

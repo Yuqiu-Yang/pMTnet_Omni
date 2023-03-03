@@ -52,7 +52,7 @@ parser.add_argument("--extra_mhc_dict_path", nargs="?", default=None,
                     help="The path to the .pickle file containing extra MHC embeddings")
 
 # User input
-parser.add_argument("--user_data_path", help="The path the user data file")
+parser.add_argument("--user_data", help="The path the user data file")
 parser.add_argument("--partition_size", type=int,
                     default=500, help="Size for each partition")
 
@@ -96,11 +96,11 @@ def main(cmdargs: argparse.Namespace):
             'cuda:0' if torch.cuda.is_available() else 'cpu')
     print("Using "+str(model_device)+"\n")
 
-    user_data_path = cmdargs.user_data_path
-    if user_data_path is None:
-        raise Exception("User data path NOT provided")
+    user_data = cmdargs.user_data
+    if user_data is None:
+        raise Exception("User data NOT provided")
     
-    file_extention = os.path.splitext(user_data_path)[1]
+    file_extention = os.path.splitext(user_data)[1]
     if file_extention == ".txt":
         sep = "\t"
     elif file_extention == ".csv":
@@ -122,17 +122,17 @@ def main(cmdargs: argparse.Namespace):
                                extra_mhc_dict=cmdargs.extra_mhc_dict_path)
 
     # Read user data file
-    pmtnet.read_user_df(user_data_path=user_data_path,
+    pmtnet.read_user_df(user_data=user_data,
+                        partition_size=cmdargs.partition_size,
+                        verbose=True,
                         sep=sep,
-                        header=0,
-                        partition_size=cmdargs.partition_size)
+                        header=0)
 
     # Prediction using rank against background
     load_embedding = not cmdargs.not_load_embedding
     compute_percentile_rank = cmdargs.compute_percentile_rank
     
-    pmtnet.predict(verbose=True,
-                   create_incomplete_data=False,
+    pmtnet.predict(create_incomplete_data=False,
                    compute_percentile_rank=compute_percentile_rank,
                    output_file_path=cmdargs.output_file_path,
                    rank_threshold=cmdargs.rank_threshold,

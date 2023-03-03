@@ -353,12 +353,29 @@ def check_data_dir_structure(path: str) -> Tuple[list, list]:
                                                                                            "pmhc_encoder.pth"])},
                                        "classifier_model_weights": {'dirs': {}, 'files': set(["classifier*.pth"])}},
                               "files": set()}
-    if (not set(required_dir_structure['dirs'].keys()).issubset(set(user_data_dir_dict['dirs'].keys()))) or \
-        (not required_dir_structure['dirs']['background_tcrs']['files'].issubset(user_data_dir_dict['dirs']['background_tcrs']['files'])) or \
+    if (not set(required_dir_structure['dirs'].keys()).issubset(set(user_data_dir_dict['dirs'].keys()))):
+        print("Detected data directory structure:\n")
+        dict_to_dir(user_data_dir_dict, pt_file_number_limit=1)
+        print("The required data directory structure is:\n")
+        dict_to_dir(required_dir_structure, pt_file_number_limit=1)
+        basic_missing = [x for x in set(required_dir_structure['dirs'].keys()) - set(user_data_dir_dict['dirs'].keys())]
+        raise Exception("Detected missing directories are:\n" + "; ".join(basic_missing) + "\n")
+        
+    if (not required_dir_structure['dirs']['background_tcrs']['files'].issubset(user_data_dir_dict['dirs']['background_tcrs']['files'])) or \
         (not set(required_dir_structure['dirs']['data_for_encoders']['dirs'].keys()).issubset(set(user_data_dir_dict['dirs']['data_for_encoders']['dirs'].keys()))) or \
             (not required_dir_structure['dirs']['data_for_encoders']['files'].issubset(user_data_dir_dict['dirs']['data_for_encoders']['files'])):
+        print("Detected data directory structure:\n")
+        dict_to_dir(user_data_dir_dict, pt_file_number_limit=2)
+        print("The required data directory structure is:\n")
         dict_to_dir(required_dir_structure, pt_file_number_limit=2)
-        raise Exception("See above for the required directory structure.\n")
+        
+        background_missing = [x for x in required_dir_structure['dirs']['background_tcrs']['files'] - user_data_dir_dict['dirs']['background_tcrs']['files']]
+        encoders_data_file_missing = [x for x in required_dir_structure['dirs']['data_for_encoders']['files'] - user_data_dir_dict['dirs']['data_for_encoders']['files']]
+        encoders_data_dir_missing = [x for x in set(required_dir_structure['dirs']['data_for_encoders']['dirs'].keys()) - set(user_data_dir_dict['dirs']['data_for_encoders']['dirs'].keys())]
+        
+        raise Exception("Detected missing files in the background_tcrs directory are:\n" + "; ".join(background_missing) + 
+                        "\n Detected missing files in the data_for_encoders directory are:\n" + "; ".join(encoders_data_file_missing) + 
+                        "\nDetected missing directories in the data_for_encoders directory are:\n" + "; ".join(encoders_data_dir_missing) + "\n")
 
     encoder_path = []
     for m in ["v_alpha_encoder.pth",

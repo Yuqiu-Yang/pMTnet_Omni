@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
+from pMTnet_Omni_Document.data_curation import read_file
 from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
 extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
@@ -13,12 +14,17 @@ extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
     (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [2, 2, 2, 2])
 ])
 def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
+    
+    df, _ = read_file(file_path='./tests/test_data/test_df.csv',
+                      background_tcrs_dir="./tests/test_data/background_tcrs",
+                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
+                      sep=",")
     pmtnet = pMTnet_Omni_class(model_device=None,
                                data_dir="./tests/test_data/",
                                seed=seed,
                                extra_mhc_dict=extra_mhc_dict)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size, sep=',')
+        user_data=df, partition_size=partition_size)
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()
@@ -33,11 +39,16 @@ def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, crea
     (2, True, True)
 ])
 def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, load_embedding):
+    df, _ = read_file(file_path='./tests/test_data/test_df.csv',
+                      background_tcrs_dir="./tests/test_data/background_tcrs",
+                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
+                      save_results=True,
+                      sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",
                                seed=None)
     pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=partition_size, sep=',')
+        user_data="./tests/test_data/df_curated.csv", partition_size=partition_size, sep=",")
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()
@@ -67,11 +78,14 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
     (False, False, './tests/test_data/test_df_results.csv')
 ])
 def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_percentile_rank, output_file_path):
+    df, _ = read_file(file_path='./tests/test_data/test_df.csv',
+                      background_tcrs_dir="./tests/test_data/background_tcrs",
+                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
+                      sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",
                                seed=None)
-    pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', sep=',')
+    pmtnet.read_user_df(user_data=df)
     try:
         pmtnet.predict(create_incomplete_data=create_incomplete_data,
                        compute_percentile_rank=compute_percentile_rank,
@@ -87,11 +101,14 @@ def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_per
     (True, pd.DataFrame({"label": [1, 0, 1, 0]})),
 ])
 def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
+    df, _ = read_file(file_path='./tests/test_data/test_df.csv',
+                      background_tcrs_dir="./tests/test_data/background_tcrs",
+                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
+                      sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",
                                seed=None)
-    pmtnet.read_user_df(
-        user_data_path='./tests/test_data/test_df.csv', partition_size=5, sep=',')
+    pmtnet.read_user_df(user_data=df, partition_size=5)
     pmtnet._encode_user_df()
     if create_incomplete_data:
         pmtnet._create_incomplete_data()

@@ -388,7 +388,8 @@ def test_check_data_dir_structure(path):
 
 
 @pytest.mark.parametrize("path", [
-    ("./tests/")
+    ("./tests/"),
+    ("./tests/error_data_dir/")
 ])
 def test_check_data_dir_structure_error(path):
     try:

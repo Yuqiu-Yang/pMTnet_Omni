@@ -50,6 +50,12 @@ class pmhc_encoder_class:
             print("Check point is not provided. Use random weights\n")
 
         self.pmhc_model.eval()
+        
+        # Seen peptide mhcs dictionaries 
+        # Key would be the name(seq), value would be the embedding
+        ##  This would be only used when device is cpu 
+        self.seen_pmhc = {}
+        
 
     def encode(self,
                df: pd.DataFrame,
@@ -93,9 +99,21 @@ class pmhc_encoder_class:
                 print("As the device is cpu, we will encode pMHCs sequentially.\n")
                 pmhc_embedding = torch.zeros(df.shape[0], 30)
                 for i in tqdm(range(df.shape[0])):
-                    pmhc_embedding[i,:], _ = self.pmhc_model(x_p[[i],:], 
-                                                             x_a[[i],:],
-                                                             x_b[[i],:])
+                    peptide = df.at[i, "peptide"]
+                    if df.at[i, "mhca_use_seq"]:
+                        mhca = df.at[i, "mhcaseq"]
+                    else:
+                        mhca = df.at[i, "mhca"]
+                    if df.at[i, "mhcb_use_seq"]:
+                        mhcb = df.at[i, "mhcbseq"]
+                    else:
+                        mhcb = df.at[i, "mhcb"]
+                    pmhc = peptide + "_" + mhca + "_" + mhcb
+                    if pmhc not in self.seen_pmhc:
+                        self.seen_pmhc[pmhc], _ = self.pmhc_model(x_p[[i],:], 
+                                                                x_a[[i],:],
+                                                                x_b[[i],:])
+                    pmhc_embedding[i,:] = self.seen_pmhc[pmhc]
             else:
                 print("As the device is not cpu, we will encode pMHCs in bulk.\n")
                 pmhc_embedding, _ = self.pmhc_model(x_p, x_a, x_b)

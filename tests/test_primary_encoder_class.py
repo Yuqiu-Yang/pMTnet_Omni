@@ -5,7 +5,7 @@ import numpy as np
 from pMTnet_Omni_Document.data_curation import read_file
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 
-test_df = read_file("./tests/test_data/test_df.csv",
+test_df, _ = read_file("./tests/test_data/test_df.csv",
                     background_tcrs_dir='./tests/test_data/background_tcrs/',
                     mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
 test_df1 = pd.DataFrame(np.random.randn(10, 70))

@@ -28,7 +28,7 @@ for file_name in tqdm(mhc_files):
         line = f.readline()
     mhc_dict[line] = "./tests/test_data/data_for_encoders/mhc_dict/" + file_name
 
-test_df = read_file("./tests/test_data/test_df.csv",
+test_df, _ = read_file("./tests/test_data/test_df.csv",
                     background_tcrs_dir='./tests/test_data/background_tcrs/',
                     mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
 
