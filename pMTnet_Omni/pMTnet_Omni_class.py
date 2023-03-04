@@ -401,12 +401,12 @@ class pMTnet_Omni_class:
                                         rank_percentile = user_output_position / (check_size[check_size_ind]+1)
                                         print("\tCurrent batch is done. The final position is "+str(
                                             user_output_position+1)+" out of "+str(check_size[check_size_ind]+1)+"\n")
-                                        if (rank_percentile > rank_threshold) or (b_size == np.max(batch_size)):
+                                        self.user_df_dict[missingness][partition].at[row, 'percentile_rank_m_'+
+                                                                                    str(model_id)+"_"+str(b)] = rank_percentile
+                                        if (rank_percentile > rank_threshold):
                                             # If the threshold is 0.03 and the rank_percentile
                                             # is greater than that, this means that more than
                                             # 3% of the background is 'better'
-                                            self.user_df_dict[missingness][partition].at[row, 'percentile_rank_m_'+
-                                                                                         str(model_id)+"_"+str(b)] = rank_percentile
                                             break
                                         user_output_position = 0
                                         b_size_so_far = 0
