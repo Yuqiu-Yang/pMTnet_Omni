@@ -1,4 +1,5 @@
 import pytest
+import os 
 import pandas as pd
 import numpy as np
 
@@ -155,6 +156,10 @@ def test_plot_validation_curve(result_dicts, plot_type, primary_type, secondary_
                               secondary_types=secondary_types,
                               title=title,
                               figure_save_path=figure_save_path)
+        try:
+            os.remove("./tests/test_data/test_plot.png")
+        except:
+            pass
         assert True
     except:
         assert False

@@ -1,4 +1,5 @@
 import pytest
+import os 
 import pandas as pd
 import numpy as np
 
@@ -62,6 +63,12 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
                                     log_file_path=None,
                                     model_id=0)
     df_dict, tcr_dict, pmhc_dict = pmtnet._amalgamate()
+    os.remove("./tests/test_data/df_curated_antigen_dropped.csv")
+    os.remove("./tests/test_data/df_curated_invalid_v.csv")
+    os.remove("./tests/test_data/df_curated_mhc_alpha_dropped.csv")
+    os.remove("./tests/test_data/df_curated_mhc_beta_dropped.csv")
+    os.remove("./tests/test_data/df_curated.csv")
+    os.remove("./tests/test_data/mhc_seq_dict.json")
     assert ("percentile_rank_m_0_0" in df_dict['complete'].columns) and\
         ("percentile_rank_m_0_1" in df_dict['complete'].columns) and\
         (df_dict['complete'].shape[0] == 4) and\
@@ -90,6 +97,12 @@ def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_per
         pmtnet.predict(create_incomplete_data=create_incomplete_data,
                        compute_percentile_rank=compute_percentile_rank,
                        output_file_path=output_file_path)
+        try:
+            os.remove('./tests/test_data/test_df_results_complete.csv')
+            os.remove('./tests/test_data/test_df_results_alpha missing.csv')
+            os.remove('./tests/test_data/test_df_results_beta missing.csv')
+        except:
+            pass 
         assert True
     except:
         assert False
@@ -128,6 +141,7 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
             for partition in pmtnet.user_df_dict[missingness]:
                 col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
                 pmtnet.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][partition][col_names].mean(axis=1)
+    os.remove("./tests/test_data/pmtnet_omni_predict_log_0.txt")
     try:
         pmtnet.validate(true_labels=true_labels)
         assert True
