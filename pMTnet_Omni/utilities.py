@@ -25,6 +25,23 @@ def plot_validation_curve(result_dicts: dict,
                           primary_type: str,
                           secondary_types: Optional[Union[str, list]] = None,
                           title: Optional[str] = None,
+                          style_sheet: str='seaborn-v0_8-white',
+                          figsize: tuple=(20, 20),
+                          title_fontsize: float=60,
+                          linewidth: float=10,
+                          xlabel_fontsize: float=55,
+                          ylabel_fontsize: float=55,
+                          xticks_fontsize: float=45,
+                          yticks_fontsize: float=45,
+                          xlim: list=[0,1],
+                          ylim: list=[0,1],
+                          axis: str="on",
+                          legend_position: str="best",
+                          legend_fontsize: float=55,
+                          handlelength: float=2,
+                          legend_title_fontsize: float=55,
+                          bbox_to_anchor = (1,1),
+                          visible_spines: bool=False,
                           figure_save_path: Optional[str] = None) -> None:
     """Plot ROC and/or PRC
 
@@ -73,16 +90,18 @@ def plot_validation_curve(result_dicts: dict,
     """
     # The nams used in the code are not suitable for plotting
     # Therefore, when creating the title, we will use their mappings
-    type_map = {"complete": "Both Chains",
-                "alpha missing": "Beta Chain",
-                "beta missing": "Alpha Chain",
+    type_map = {"complete": "Both",
+                "alpha missing": "Beta",
+                "beta missing": "Alpha",
                 "overall": "All",
                 "human overall": "Human",
                 "mouse overall": "Mouse",
                 "human class i": "Human C1",
                 "human class ii": "Human C2",
                 "mouse class i": "Mouse C1",
-                "mouse class ii": "Mouse C2"}
+                "mouse class ii": "Mouse C2",
+                "class i": "Class I",
+                "class ii": "Class II"}
 
     if plot_type == "roc":
         x_key = "fpr"
@@ -90,14 +109,12 @@ def plot_validation_curve(result_dicts: dict,
         y_key = "tpr"
         y_label = 'Sensitivity'
         auc_key = "auroc"
-        legend_pos = "lower right"
     elif plot_type == "prc":
         x_key = "recall"
         x_label = "Recall"
         y_key = "precision"
         y_label = "Precision"
         auc_key = "auprc"
-        legend_pos = "lower left"
     else:
         raise Exception("Only roc or prc are acceptable.\n")
 
@@ -116,7 +133,8 @@ def plot_validation_curve(result_dicts: dict,
 
     elif primary_type in ["overall", "human overall", "mouse overall",
                           "human class i", "human class ii",
-                          "mouse class i", "mouse class ii"]:
+                          "mouse class i", "mouse class ii",
+                          "class i", "class ii"]:
         if secondary_types is None:
             secondary_types = ["complete", "alpha missing", "beta missing"]
 
@@ -132,28 +150,35 @@ def plot_validation_curve(result_dicts: dict,
 
     colors = mpl.colormaps["inferno"].resampled(len(secondary_types) + 1)
 
-    plt.style.use('seaborn-v0_8-whitegrid')
-    fig = plt.figure(figsize=(10, 10))
-    fig.suptitle(title, fontsize=60)
+    plt.style.use(style_sheet)
+    fig = plt.figure(figsize=figsize)
+    fig.suptitle(title, fontsize=title_fontsize)
 
     counter = 0
     for s_type in plot_dict:
         plt.plot(plot_dict[s_type]["x"],
                  plot_dict[s_type]["y"],
-                 linewidth=10, color=colors.colors[counter],
-                 label=type_map[s_type]+": AUC = "+str(plot_dict[s_type]["auc"]))
+                 linewidth=linewidth, color=colors.colors[counter],
+                 label=type_map[s_type]+": "+str(plot_dict[s_type]["auc"]))
         counter += 1
 
-    plt.xlabel(x_label, fontsize=55)
-    plt.ylabel(y_label, fontsize=55)
+    plt.xlabel(x_label, fontsize=xlabel_fontsize)
+    plt.ylabel(y_label, fontsize=ylabel_fontsize)
 
-    plt.xticks(fontsize=45)
-    plt.yticks(fontsize=45)
+    plt.xticks(fontsize=xticks_fontsize)
+    plt.yticks(fontsize=yticks_fontsize)
 
-    plt.xlim([0,1])
-    plt.ylim([0,1])
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    plt.axis(axis)
+    for pos in ['right', 'top', 'bottom', 'left']:
+        plt.gca().spines[pos].set_visible(visible_spines)
     
-    plt.legend(loc=legend_pos, fontsize=55)
+    plt.legend(loc=legend_position,
+               bbox_to_anchor=bbox_to_anchor,
+               fontsize=legend_fontsize, 
+               handlelength=handlelength,
+               title="AUC", title_fontsize=legend_title_fontsize)
     plt.tight_layout()
     
     if figure_save_path is not None:

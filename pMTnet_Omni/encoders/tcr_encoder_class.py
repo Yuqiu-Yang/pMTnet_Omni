@@ -142,7 +142,7 @@ class tcr_encoder_class:
                                        aa_dict_atchley=aa_dict_atchley,
                                        padding=padding,
                                        verbose=verbose)).to(self.model_device)
-        encoded, _, _, _ = model(seq)
+        _, _, encoded, _ = model(seq)
         encoded[torch.isnan(encoded).all(dim=1)] = 0
         return encoded
 

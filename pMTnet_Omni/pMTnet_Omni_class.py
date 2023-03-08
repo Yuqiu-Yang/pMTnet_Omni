@@ -194,9 +194,8 @@ class pMTnet_Omni_class:
             # Manipulate tcr embedding
             tcr_embedding_alpha_missing = self.user_tcr_embedding_dict['complete'][partition].detach(
             ).clone()
-            # The embedding order is va (5) vb (5) cdr3a (30) cdr3b (30)
-            tcr_embedding_alpha_missing[:, 0:5] = 0
-            tcr_embedding_alpha_missing[:, 10:40] = 0
+            # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+            tcr_embedding_alpha_missing[:, 0:35] = 0
             self.user_tcr_embedding_dict['alpha missing'][partition] = tcr_embedding_alpha_missing
 
             # Zero out TCR Beta chain
@@ -211,9 +210,8 @@ class pMTnet_Omni_class:
             # Manipulate tcr embedding
             tcr_embedding_beta_missing = self.user_tcr_embedding_dict['complete'][partition].detach(
             ).clone()
-            # The embedding order is va (5) vb (5) cdr3a (30) cdr3b (30)
-            tcr_embedding_beta_missing[:, 5:10] = 0
-            tcr_embedding_beta_missing[:, 40:70] = 0
+            # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+            tcr_embedding_beta_missing[:, 35:70] = 0
             self.user_tcr_embedding_dict['beta missing'][partition] = tcr_embedding_beta_missing
 
     def _get_user_df_output(self) -> None:
@@ -596,7 +594,8 @@ class pMTnet_Omni_class:
         # For each missingness type, we also compute different auc types
         auc_to_compute = ["overall", "human overall", "mouse overall",
                           "human class i", "human class ii",
-                          "mouse class i", "mouse class ii"]
+                          "mouse class i", "mouse class ii",
+                          "class i", "class ii"]
 
         for missingness in self.user_df_dict:
             if len(self.user_df_dict[missingness]) == 0:
