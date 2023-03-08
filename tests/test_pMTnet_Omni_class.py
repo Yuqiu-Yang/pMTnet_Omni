@@ -67,7 +67,6 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
     os.remove("./tests/test_data/df_curated_invalid_v.csv")
     os.remove("./tests/test_data/df_curated_mhc_alpha_dropped.csv")
     os.remove("./tests/test_data/df_curated_mhc_beta_dropped.csv")
-    os.remove("./tests/test_data/df_curated.csv")
     os.remove("./tests/test_data/mhc_seq_dict.json")
     assert ("percentile_rank_m_0_0" in df_dict['complete'].columns) and\
         ("percentile_rank_m_0_1" in df_dict['complete'].columns) and\
