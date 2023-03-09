@@ -630,7 +630,10 @@ class pMTnet_Omni_class:
                 elif auc_type == "mouse overall":
                     ind = df['mhc_class'].str.contains('mouse')
                 else:
-                    ind = df['mhc_class'].str.contains(auc_type)
+                    # NOTE that 'human class i' is a substring of 
+                    # 'human class ii'
+                    # We need $ at then end 
+                    ind = df['mhc_class'].str.contains(auc_type+'$')
 
                 if np.sum(ind) < 1:
                     continue
