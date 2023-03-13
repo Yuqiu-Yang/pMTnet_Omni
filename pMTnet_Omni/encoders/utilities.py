@@ -123,7 +123,9 @@ def aa_mapping(peptide_seq: str,
         except:
             # Otherwise, we replace with 0s
             peptide_array.append(np.zeros(5, dtype='float32'))
-    return np.concatenate((np.asarray(peptide_array), np.zeros((padding - len(peptide_seq), 5), dtype='float32')), axis=0)
+    return np.concatenate((np.asarray(peptide_array).reshape(-1,5), 
+                           np.zeros((padding - len(peptide_seq), 5), 
+                                    dtype='float32')), axis=0)
 
 
 def peptide_map(df: pd.DataFrame,
