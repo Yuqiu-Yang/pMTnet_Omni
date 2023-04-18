@@ -38,7 +38,8 @@ class tcr_encoder_class:
                  vGdVAEacheckpoint_path: Optional[str] = None,
                  vGdVAEbcheckpoint_path: Optional[str] = None,
                  cdr3VAEacheckpoint_path: Optional[str] = None,
-                 cdr3VAEbcheckpoint_path: Optional[str] = None) -> None:
+                 cdr3VAEbcheckpoint_path: Optional[str] = None,
+                 mutation_mode: str="zero") -> None:
         """The TCR encoder
 
         Parameters
@@ -53,13 +54,18 @@ class tcr_encoder_class:
             The path to CDR3 Alpha encoder
         cdr3VAEbcheckpoint_path: Optional[str]
             The path to CDR3 Beta encoder
+        mutation_mode: str
+            How unknown AAs should be interpolated
+            zero: 5 zeros 
+            alanine: atchley factor for A
+            average: average atchley factor 
 
         
         """
         if isinstance(model_device, str):
             model_device = torch.device(model_device)
         self.model_device = model_device
-
+        self.mutation_mode = mutation_mode
         # Initialize the models
         self.va_model = vGdVAEa().to(model_device)
         self.vb_model = vGdVAEb().to(model_device)
@@ -141,7 +147,8 @@ class tcr_encoder_class:
                                        column_name=column_name,
                                        aa_dict_atchley=aa_dict_atchley,
                                        padding=padding,
-                                       verbose=verbose)).to(self.model_device)
+                                       verbose=verbose,
+                                       mutation_mode=self.mutation_mode)).to(self.model_device)
         _, _, encoded, _ = model(seq)
         encoded[torch.isnan(encoded).all(dim=1)] = 0
         return encoded

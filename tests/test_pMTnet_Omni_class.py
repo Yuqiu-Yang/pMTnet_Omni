@@ -17,8 +17,6 @@ extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
 def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
     
     df, _ = read_file(file_path='./tests/test_data/test_df.csv',
-                      background_tcrs_dir="./tests/test_data/background_tcrs",
-                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
                       sep=",")
     pmtnet = pMTnet_Omni_class(model_device=None,
                                data_dir="./tests/test_data/",
@@ -41,8 +39,6 @@ def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, crea
 ])
 def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, load_embedding):
     df, _ = read_file(file_path='./tests/test_data/test_df.csv',
-                      background_tcrs_dir="./tests/test_data/background_tcrs",
-                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
                       save_results=True,
                       sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
@@ -85,8 +81,6 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
 ])
 def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_percentile_rank, output_file_path):
     df, _ = read_file(file_path='./tests/test_data/test_df.csv',
-                      background_tcrs_dir="./tests/test_data/background_tcrs",
-                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
                       sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",
@@ -114,8 +108,6 @@ def test_pMTnet_Omni_class_prediction_method(create_incomplete_data, compute_per
 ])
 def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
     df, _ = read_file(file_path='./tests/test_data/test_df.csv',
-                      background_tcrs_dir="./tests/test_data/background_tcrs",
-                      mhc_path="./tests/test_data/data_for_encoders/valid_mhc.txt",
                       sep=",")
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",

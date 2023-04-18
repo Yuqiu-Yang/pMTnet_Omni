@@ -37,7 +37,8 @@ class pMTnet_Omni_class:
                  model_device: Optional[Union[str, torch.device]] = None,
                  data_dir: str = "./data/",
                  seed: Optional[int] = None,
-                 extra_mhc_dict: Optional[Union[dict, str]] = None) -> None:
+                 extra_mhc_dict: Optional[Union[dict, str]] = None,
+                 mutation_mode: str = "zero") -> None:
         """Initialize pMTnet_Omni_class object
 
         Parameters
@@ -51,6 +52,11 @@ class pMTnet_Omni_class:
         extra_mhc_dict: Optional[Union[dict, str]] = None
             A dictionary or a path to a .json file 
             containing extra MHC embeddings  
+        mutation_mode: str
+            How unknown AAs should be interpolated
+            zero: 5 zeros 
+            alanine: atchley factor for A
+            average: average atchley factor 
 
         """
         # Set model device
@@ -62,6 +68,10 @@ class pMTnet_Omni_class:
         else:
             self.model_device = model_device
         
+        # Set the mutation mode 
+        self.mutation_mode = mutation_mode
+        
+        # Get paths to required data 
         encoder_path, classifier_path = check_data_dir_structure(data_dir)
 
         self.background_data_dir = os.path.join(data_dir, "background_tcrs/")
@@ -109,7 +119,8 @@ class pMTnet_Omni_class:
                                      cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
                                      cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path,
                                      pMHCcheckpoint_path=pMHCcheckpoint_path,
-                                     extra_mhc_dict=self.extra_mhc_dict)
+                                     extra_mhc_dict=self.extra_mhc_dict,
+                                     mutation_mode=self.mutation_mode)
 
         # Initialize th clssifier model
         self.classifier_model = ensemble_pMHCTCR(model_device=self.model_device,
@@ -146,10 +157,14 @@ class pMTnet_Omni_class:
             #                     **kwargs)
         else:
             raise TypeError("user_data should either the path to the file or a pd.DataFrame")
-        
+        # Make sure that all the NaN are converted to ""
+        user_df = user_df.fillna("")
+        # Add output columns 
         for id in range(self.ensemble_size):
             user_df['logit_m_'+str(id)] = np.inf
+        
         user_df['logit'] = np.inf 
+        
         self.user_df_dict['complete'] = partition_dataframe(
             df=user_df, partition_size=partition_size)
 
@@ -286,7 +301,7 @@ class pMTnet_Omni_class:
         return batch_size, batch_finished_indicator, background_human_dataloader, background_mouse_dataloader
 
     def _compute_percentile_rank(self,
-                                 rank_threshold: float = 0.03,
+                                 rank_threshold: Union[float, list, np.ndarray]=0.03,
                                  B: int = 1,
                                  load_embedding: bool = True,
                                  replacement: bool = True,
@@ -299,7 +314,7 @@ class pMTnet_Omni_class:
 
         Parameters
         ----------
-        rank_threshold: float
+        rank_threshold: float, list, np.ndarray
             The rank percentile threshold greater than which further verification is NOT conducted 
         B: int 
             Number of trials 
@@ -332,7 +347,20 @@ class pMTnet_Omni_class:
             with redirect_stdout(f):
                 # Make sure check size is in an ascending order
                 print("Model "+str(model_id)+"... \n")
+                # We sort the check size in an ascending order
                 check_size = np.sort(check_size)
+                
+                # We first make sure that the variable is an 1d np.array 
+                # Note that this also works if the variable is a float 
+                rank_threshold = np.array(rank_threshold).flatten()
+                # We sort the thresholds in a descending order 
+                rank_threshold = np.sort(rank_threshold)[::-1]
+                # If check size is longer than threshold
+                # we pad the minimum values 
+                rank_threshold = np.pad(rank_threshold, 
+                                        pad_width=(0, np.max([0, len(check_size) - len(rank_threshold)])),
+                                        mode='minimum')
+                    
                 for b in range(B):
                     print("Starting trial "+str(b+1) +
                           " out of "+str(B)+" total tries\n")
@@ -401,7 +429,7 @@ class pMTnet_Omni_class:
                                             user_output_position+1)+" out of "+str(check_size[check_size_ind]+1)+"\n")
                                         self.user_df_dict[missingness][partition].at[row, 'percentile_rank_m_'+
                                                                                     str(model_id)+"_"+str(b)] = rank_percentile
-                                        if (rank_percentile > rank_threshold):
+                                        if (rank_percentile > rank_threshold[check_size_ind]):
                                             # If the threshold is 0.03 and the rank_percentile
                                             # is greater than that, this means that more than
                                             # 3% of the background is 'better'
@@ -474,7 +502,7 @@ class pMTnet_Omni_class:
                 create_incomplete_data: bool = False,
                 compute_percentile_rank: bool = True,
                 output_file_path: Optional[str] = None,
-                rank_threshold: float = 0.03,
+                rank_threshold: Union[float, list, np.ndarray] = 0.03,
                 B: int = 1,
                 load_embedding: bool = True,
                 replacement: bool = True,
@@ -492,7 +520,7 @@ class pMTnet_Omni_class:
             Whether or not to compute percentile ranks. If False, then only logits will be computed 
         output_file_path: Optional[str]
             The path the output file. ONLY .csv file is supported 
-        rank_threshold: float
+        rank_threshold: Union[float, list, np.ndarray]
             The rank percentile threshold greater than which further verification is NOT conducted 
         B: int 
             Number of trials 

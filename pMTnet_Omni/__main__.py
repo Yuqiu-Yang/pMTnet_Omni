@@ -43,7 +43,7 @@ parser.add_argument("--author", action="version", version=__author__,
 
 # Initialize pMTnet_Omni class
 parser.add_argument(
-    "--model_device", choices=["cpu", "gpu", "cuda:0"], default="cuda:0", help="Choose the model device")
+    "--model_device", default="cuda:0", help="Choose the model device")
 parser.add_argument("--data_dir", default="./data",
                     help="The data directory containing data necessary for model setups")
 parser.add_argument("--seed", type=int, nargs="?", default=None,
@@ -59,7 +59,7 @@ parser.add_argument("--partition_size", type=int,
 # Prediction
 parser.add_argument("--compute_percentile_rank", action="store_true",
                     help="Whether or not to compute percentile ranks")
-parser.add_argument("--rank_threshold", type=float, default=0.03,
+parser.add_argument("--rank_threshold", nargs='+', type=float, default=[0.03],
                     help="The rank percentile threshold greater than which further varification is NOT conducted")
 parser.add_argument("--not_load_embedding", action="store_true",
                     help="NOT load embeddings of the background tcrs. THIS WILL BE SLOOOOOW")
@@ -93,7 +93,7 @@ def main(cmdargs: argparse.Namespace):
         model_device = "cpu"
     else:
         model_device = torch.device(
-            'cuda:0' if torch.cuda.is_available() else 'cpu')
+            cmdargs.model_device if torch.cuda.is_available() else 'cpu')
     print("Using "+str(model_device)+"\n")
 
     user_data = cmdargs.user_data

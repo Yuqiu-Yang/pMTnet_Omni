@@ -23,7 +23,8 @@ from pMTnet_Omni.encoders.utilities import peptide_map, mhc_map
 class pmhc_encoder_class:
     def __init__(self,
                  model_device: Union[str, torch.device],
-                 pMHCcheckpoint_path: Optional[str] = None) -> None:
+                 pMHCcheckpoint_path: Optional[str] = None,
+                 mutation_mode: str="zero") -> None:
         """The pMHC encoder
 
         Parameters
@@ -32,11 +33,17 @@ class pmhc_encoder_class:
             cpu or gpu
         pMHCcheckpoint_path: Optional[str]
             The path to pMHC the encoder
-        
+        mutation_mode: str
+            How unknown AAs should be interpolated
+            zero: 5 zeros 
+            alanine: atchley factor for A
+            average: average atchley factor 
+
         """
         if isinstance(model_device, str):
             model_device = torch.device(model_device)
         self.model_device = model_device
+        self.mutation_mode = mutation_mode
         
         self.pmhc_model = pMHC().to(model_device)
         
@@ -86,7 +93,8 @@ class pmhc_encoder_class:
                                            column_name="peptide",
                                            aa_dict_atchley=aa_dict_atchley,
                                            padding=30,
-                                           verbose=verbose)).to(self.model_device)
+                                           verbose=verbose,
+                                           mutation_mode=self.mutation_mode)).to(self.model_device)
             x_a = torch.Tensor(mhc_map(df=df,
                                        column_name="mhca",
                                        mhc_dict=mhc_dict,

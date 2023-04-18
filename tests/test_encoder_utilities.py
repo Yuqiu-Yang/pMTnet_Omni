@@ -58,9 +58,7 @@ def test_esm_mapping(mhc, mhc_dict, use_seq, mhcseq):
     ("mhcb", mhc_dict, False),
 ])
 def test_mhc_map(column_name, mhc_dict, verbose):
-    test_df,_ = read_file("./tests/test_data/test_df.csv",
-                        background_tcrs_dir='./tests/test_data/background_tcrs/',
-                        mhc_path='./tests/test_data/data_for_encoders/valid_mhc.txt')
+    test_df,_ = read_file("./tests/test_data/test_df.csv")
     try:
         result = mhc_map(df=test_df, column_name=column_name,
                          mhc_dict=mhc_dict, verbose=verbose)

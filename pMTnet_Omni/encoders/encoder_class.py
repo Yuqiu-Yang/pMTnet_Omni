@@ -29,7 +29,8 @@ class encoder_class:
                  cdr3VAEacheckpoint_path: Optional[str] = None,
                  cdr3VAEbcheckpoint_path: Optional[str] = None,
                  pMHCcheckpoint_path: Optional[str] = None,
-                 extra_mhc_dict: Optional[dict] = None) -> None:
+                 extra_mhc_dict: Optional[dict] = None,
+                 mutation_mode: str="zero") -> None:
         """The main encoder class 
 
         Parameters
@@ -50,7 +51,12 @@ class encoder_class:
             The path to pMHC the encoder
         extra_mhc_dict: Optional[dict] = None
             A dictionary containing extra MHC embeddings  
-        
+        mutation_mode: str
+            How unknown AAs should be interpolated
+            zero: 5 zeros 
+            alanine: atchley factor for A
+            average: average atchley factor 
+
         """
         # Build an amino acid dictionary
         # to convert strings to numeric vectors
@@ -84,17 +90,20 @@ class encoder_class:
         if isinstance(model_device, str):
             model_device = torch.device(model_device)
         self.model_device = model_device
-
+        self.mutation_mode = mutation_mode
+        
         # Initialize two encoders
         print("Initializing TCR+CDR3 encoders\n")
         self.tcr_encoder = tcr_encoder_class(model_device=self.model_device,
                                              vGdVAEacheckpoint_path=vGdVAEacheckpoint_path,
                                              vGdVAEbcheckpoint_path=vGdVAEbcheckpoint_path,
                                              cdr3VAEacheckpoint_path=cdr3VAEacheckpoint_path,
-                                             cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path)
+                                             cdr3VAEbcheckpoint_path=cdr3VAEbcheckpoint_path,
+                                             mutation_mode=self.mutation_mode)
         print("Initializing pMHC encoders\n")
         self.pmhc_encoder = pmhc_encoder_class(model_device=self.model_device,
-                                               pMHCcheckpoint_path=pMHCcheckpoint_path)
+                                               pMHCcheckpoint_path=pMHCcheckpoint_path,
+                                               mutation_mode=self.mutation_mode)
 
     def encode(self,
                df: pd.DataFrame,

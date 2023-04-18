@@ -94,7 +94,8 @@ def mhc_map(df: pd.DataFrame,
 
 def aa_mapping(peptide_seq: str,
                aa_dict_atchley: dict,
-               padding: int) -> np.ndarray:
+               padding: int,
+               mutation_value: np.ndarray=np.zeros(5, dtype='float32')) -> np.ndarray:
     """Converts a sequence of amino acids to their Atchley Factors
 
     Parameters
@@ -106,7 +107,9 @@ def aa_mapping(peptide_seq: str,
         corresponding Atchley Factors 
     padding: int 
         The maximun length of the amino acid squence 
-    
+    mutation_mode: np.ndarray
+        The embedding for unknown AAs 
+
     Returns
     ---------
     np.array
@@ -122,7 +125,7 @@ def aa_mapping(peptide_seq: str,
             peptide_array.append(aa_dict_atchley[aa_single])
         except:
             # Otherwise, we replace with 0s
-            peptide_array.append(np.zeros(5, dtype='float32'))
+            peptide_array.append(mutation_value)
     return np.concatenate((np.asarray(peptide_array).reshape(-1,5), 
                            np.zeros((padding - len(peptide_seq), 5), 
                                     dtype='float32')), axis=0)
@@ -132,7 +135,8 @@ def peptide_map(df: pd.DataFrame,
                 column_name: str,
                 aa_dict_atchley: dict,
                 padding: int,
-                verbose: bool=False) -> np.ndarray:
+                verbose: bool=False,
+                mutation_mode: str="zero") -> np.ndarray:
     """Converts a column of amino acid sequences to their Atchley Factors 
 
     Parameters
@@ -146,6 +150,11 @@ def peptide_map(df: pd.DataFrame,
         corresponding Atchley Factors 
     padding: int 
         The maximun length of the amino acid squence 
+    mutation_mode: str
+        How unknown AAs should be interpolated
+        zero: 5 zeros 
+        alanine: atchley factor for A
+        average: average atchley factor 
 
     Returns
     -------
@@ -156,8 +165,16 @@ def peptide_map(df: pd.DataFrame,
     verboseprint = print if verbose else lambda *a, **k: None
     peptide_array = np.zeros((len(df), 1, padding, 5), dtype=np.float32)
     verboseprint("Mapping "+column_name+"\n")
+    
+    atchley_ave = np.mean(np.array(list(aa_dict_atchley.values())), axis=0)
+    
+    mutation_dict = {"zero": np.zeros(5, dtype='float32'),
+                     "alanine": aa_dict_atchley['A'].astype('float32'),
+                     "average": atchley_ave.astype('float32')}
+    
     for pos, seq in tqdm(enumerate(df[column_name]), disable=(not verbose)):
         peptide_array[pos, 0] = aa_mapping(peptide_seq=seq,
                                            aa_dict_atchley=aa_dict_atchley,
-                                           padding=padding)
+                                           padding=padding,
+                                           mutation_value=mutation_dict[mutation_mode])
     return peptide_array
