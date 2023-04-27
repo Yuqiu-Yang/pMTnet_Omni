@@ -6,6 +6,7 @@ import numpy as np
 from pMTnet_Omni.utilities import plot_validation_curve, \
                                     batchify_check_size, \
                                     partition_dataframe, \
+                                    split_dataframe, \
                                     setup_seed, \
                                     path_to_dict, \
                                     dict_to_dir, \
@@ -339,6 +340,20 @@ def test_partition_dataframe(df, partition_size, expected):
     partitions = partition_dataframe(df=df, partition_size=partition_size)
     assert (partitions[0].shape[0] == expected[0]) and (
         partitions[1].shape[0] == expected[1])
+
+#########################
+# split_dataframe 
+
+@pytest.mark.parametrize("df, by_columns, expected", [
+    (pd.DataFrame({"a": [1,1,2,3], "b": [4,5,6,7]}), ["a"], [2,1,1])
+])
+def test_split_dataframe(df, by_columns, expected):
+    splits = split_dataframe(df=df, by_columns=by_columns)
+    size_list = []
+    for i in splits:
+        size_list.append(splits[i].shape[0])
+    assert size_list == expected
+
 
 ########################
 # setup_seed

@@ -29,7 +29,7 @@ except ImportError:
 from pMTnet_Omni.encoders.encoder_class import encoder_class
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
 # from pMTnet_Omni_Document.data_curation import read_file
-from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, check_data_dir_structure
+from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, split_dataframe, check_data_dir_structure
 
 
 class pMTnet_Omni_class:
@@ -151,10 +151,6 @@ class pMTnet_Omni_class:
             user_df = pd.read_csv(user_data, **kwargs)
         elif isinstance(user_data, pd.DataFrame):
             user_df = deepcopy(user_data)
-            # user_df = read_file(file_path=user_data,
-            #                     background_tcrs_dir=self.background_data_dir,
-            #                     mhc_path=os.path.join(self.encoder_data_dir, "valid_mhc.txt"),
-            #                     **kwargs)
         else:
             raise TypeError("user_data should either the path to the file or a pd.DataFrame")
         # Make sure that all the NaN are converted to ""
@@ -164,9 +160,19 @@ class pMTnet_Omni_class:
             user_df['logit_m_'+str(id)] = np.inf
         
         user_df['logit'] = np.inf 
+        # Split the dataframe by pmhc 
+        splits = split_dataframe(df=user_df,
+                                 by_columns=['peptide', 
+                                             'mhca',
+                                             'mhcb',
+                                             'mhcaseq',
+                                             'mhcbseq',
+                                             'pmhc_species'])
         
-        self.user_df_dict['complete'] = partition_dataframe(
-            df=user_df, partition_size=partition_size)
+        for s in splits:
+            self.user_df_dict['complete'][s] = partition_dataframe(
+                                                df=splits[s], 
+                                                partition_size=partition_size)
 
     def _encode_user_df(self,
                         verbose: bool = True) -> None:
@@ -178,14 +184,15 @@ class pMTnet_Omni_class:
             Whether or not to print out model process 
 
         """
-        for partition in self.user_df_dict['complete']:
-            tcr_embedding, pmhc_embedding = self.encoder.encode(df=self.user_df_dict['complete'][partition],
-                                                                is_embedding=False,
-                                                                verbose=verbose)
-            self.user_tcr_embedding_dict['complete'][partition] = tcr_embedding.to(
-                'cpu')
-            self.user_pmhc_embedding_dict['complete'][partition] = pmhc_embedding.to(
-                'cpu')
+        for split in self.user_df_dict['complete']:
+            self.user_tcr_embedding_dict['complete'][split] = {}
+            self.user_pmhc_embedding_dict['complete'][split] = {}
+            for partition in self.user_df_dict['complete'][split]:
+                tcr_embedding, pmhc_embedding = self.encoder.encode(df=self.user_df_dict['complete'][split][partition],
+                                                                    is_embedding=False,
+                                                                    verbose=verbose)
+                self.user_tcr_embedding_dict['complete'][split][partition] = tcr_embedding.to('cpu')
+                self.user_pmhc_embedding_dict['complete'][split][partition] = pmhc_embedding.to('cpu')
 
     def _create_incomplete_data(self) -> None:
         """Create incomplete data based on the user dataframe 
@@ -196,38 +203,42 @@ class pMTnet_Omni_class:
         For the second duplicate, all tcr information on the beta chain will be removed. 
 
         """
-        for partition in self.user_df_dict['complete']:
-            # Zero out TCR Alpha chain
-            # Manipulate the dataframe
-            # not necessary but might be useful when debugging
-            df_alpha_missing = deepcopy(
-                self.user_df_dict['complete'][partition])
-            df_alpha_missing['va'] = ""
-            df_alpha_missing['vaseq'] = ""
-            df_alpha_missing['cdr3a'] = ""
-            self.user_df_dict['alpha missing'][partition] = df_alpha_missing
-            # Manipulate tcr embedding
-            tcr_embedding_alpha_missing = self.user_tcr_embedding_dict['complete'][partition].detach(
-            ).clone()
-            # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
-            tcr_embedding_alpha_missing[:, 0:35] = 0
-            self.user_tcr_embedding_dict['alpha missing'][partition] = tcr_embedding_alpha_missing
+        for split in self.user_df_dict['complete']:
+            self.user_df_dict['alpha missing'][split] = {}
+            self.user_df_dict['beta missing'][split] = {}
+            self.user_tcr_embedding_dict['alpha missing'][split] = {}
+            self.user_tcr_embedding_dict['beta missing'][split] = {}
+            
+            for partition in self.user_df_dict['complete'][split]:
+                # Zero out TCR Alpha chain
+                # Manipulate the dataframe
+                # not necessary but might be useful when debugging
+                df_alpha_missing = deepcopy(
+                    self.user_df_dict['complete'][split][partition])
+                df_alpha_missing['va'] = ""
+                df_alpha_missing['vaseq'] = ""
+                df_alpha_missing['cdr3a'] = ""
+                self.user_df_dict['alpha missing'][split][partition] = df_alpha_missing
+                # Manipulate tcr embedding
+                tcr_embedding_alpha_missing = self.user_tcr_embedding_dict['complete'][split][partition].detach().clone()
+                # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+                tcr_embedding_alpha_missing[:, 0:35] = 0
+                self.user_tcr_embedding_dict['alpha missing'][split][partition] = tcr_embedding_alpha_missing
 
-            # Zero out TCR Beta chain
-            # Manipulate the dataframe
-            # not necessary but might be useful when debugging
-            df_beta_missing = deepcopy(
-                self.user_df_dict['complete'][partition])
-            df_beta_missing['vb'] = ""
-            df_beta_missing['vbseq'] = ""
-            df_beta_missing['cdr3b'] = ""
-            self.user_df_dict['beta missing'][partition] = df_beta_missing
-            # Manipulate tcr embedding
-            tcr_embedding_beta_missing = self.user_tcr_embedding_dict['complete'][partition].detach(
-            ).clone()
-            # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
-            tcr_embedding_beta_missing[:, 35:70] = 0
-            self.user_tcr_embedding_dict['beta missing'][partition] = tcr_embedding_beta_missing
+                # Zero out TCR Beta chain
+                # Manipulate the dataframe
+                # not necessary but might be useful when debugging
+                df_beta_missing = deepcopy(
+                    self.user_df_dict['complete'][split][partition])
+                df_beta_missing['vb'] = ""
+                df_beta_missing['vbseq'] = ""
+                df_beta_missing['cdr3b'] = ""
+                self.user_df_dict['beta missing'][split][partition] = df_beta_missing
+                # Manipulate tcr embedding
+                tcr_embedding_beta_missing = self.user_tcr_embedding_dict['complete'][split][partition].detach().clone()
+                # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+                tcr_embedding_beta_missing[:, 35:70] = 0
+                self.user_tcr_embedding_dict['beta missing'][split][partition] = tcr_embedding_beta_missing
 
     def _get_user_df_output(self) -> None:
         """Predict using the dataframe
@@ -238,13 +249,14 @@ class pMTnet_Omni_class:
         for missingness in self.user_df_dict:
             if len(self.user_df_dict[missingness]) == 0:
                 continue
-            for partition in self.user_df_dict[missingness]:
-                df_output = self.classifier_model.predict(
-                    pmhc_embedding=self.user_pmhc_embedding_dict['complete'][partition].to(self.model_device),
-                    tcr_embedding=self.user_tcr_embedding_dict[missingness][partition].to(self.model_device))
-                for id in range(self.ensemble_size):
-                    self.user_df_dict[missingness][partition]['logit_m_'+str(id)] = df_output[:,id]
-                self.user_df_dict[missingness][partition]['logit'] = np.mean(df_output, axis=1)
+            for split in self.user_df_dict[missingness]:
+                for partition in self.user_df_dict[missingness][split]:
+                    df_output = self.classifier_model.predict(
+                        pmhc_embedding=self.user_pmhc_embedding_dict['complete'][split][partition].to(self.model_device),
+                        tcr_embedding=self.user_tcr_embedding_dict[missingness][split][partition].to(self.model_device))
+                    for id in range(self.ensemble_size):
+                        self.user_df_dict[missingness][split][partition]['logit_m_'+str(id)] = df_output[:,id]
+                    self.user_df_dict[missingness][split][partition]['logit'] = np.mean(df_output, axis=1)
                 
                 
     def _generate_background_dataloader(self,
@@ -355,11 +367,18 @@ class pMTnet_Omni_class:
                 rank_threshold = np.array(rank_threshold).flatten()
                 # We sort the thresholds in a descending order 
                 rank_threshold = np.sort(rank_threshold)[::-1]
-                # If check size is longer than threshold
+                # If check size - 1 is longer than threshold
                 # we pad the minimum values 
                 rank_threshold = np.pad(rank_threshold, 
-                                        pad_width=(0, np.max([0, len(check_size) - len(rank_threshold)])),
+                                        pad_width=(0, np.max([0, len(check_size) - 1 - len(rank_threshold)])),
                                         mode='minimum')
+                # Finally, we pad a 0 at then end 
+                # This is just so that the length of the threholds 
+                # would be the same as the check size list 
+                rank_threshold = np.pad(rank_threshold, 
+                                        pad_width=(0,1),
+                                        mode='constant',
+                                        constant_values=0.0)
                     
                 for b in range(B):
                     print("Starting trial "+str(b+1) +
@@ -373,70 +392,86 @@ class pMTnet_Omni_class:
                     for missingness in self.user_df_dict:
                         if len(self.user_df_dict[missingness]) == 0:
                             continue
-                        for partition in self.user_df_dict[missingness]:
-                            n_rows = self.user_df_dict[missingness][partition].shape[0]
-                            self.user_df_dict[missingness][partition]["percentile_rank_m_" + str(model_id) +
-                                                                      "_"+str(b)] = np.inf
-                            tcr_species_df = self.user_df_dict[missingness][partition]["tcr_species"].to_frame(
-                            )
-
-                            for row in tqdm(range(n_rows), position=0, leave=True):
-                                # Depending on the species, we use their corresponding dataloader
-                                if tcr_species_df.iloc[row, 0] == "human":
-                                    data_loader = background_human_dataloader
-                                else:
-                                    data_loader = background_mouse_dataloader
+                        for split in self.user_df_dict[missingness]:
+                            # Creat columns for percentile ranks 
+                            for partition in self.user_df_dict[missingness][split]:
+                                self.user_df_dict[missingness][split][partition]["percentile_rank_m_" + str(model_id) +
+                                                                                 "_"+str(b)] = np.inf
+                                self.user_df_dict[missingness][split][partition]["rank_m_" + str(model_id) + "_"+str(b)] = 0
+                            # Depending on the species, we use their corresponding dataloader
+                            if split[-1] == "human":
+                                data_loader = background_human_dataloader
+                            else:
+                                data_loader = background_mouse_dataloader
+                            # Compute background logits
+                            # and update ranks for each tcr 
+                            check_size_ind = 0
+                            b_size_so_far = 0
+                            for batch_size_ind, tcrs in enumerate(data_loader):
+                                b_size = batch_size[batch_size_ind]
+                                b_size_so_far += b_size
                                 print(
-                                    self.user_df_dict[missingness][partition].iloc[[row], :])
+                                    "Verifying using "+str(check_size[check_size_ind]) + " background tcrs\n")
+                                print("\tLoading minibatch of " +
+                                    str(tcrs.shape[0]) + " tcrs\n")
+                                #####################################
+                                print("\tEncoding background tcrs\n")
+                                background_tcr_embedding, _ = self.encoder.encode(
+                                    df=tcrs, is_embedding=load_embedding)
+                                # Since in each split, pmhc is identical ,
+                                # we will just repeat the first occurance 
+                                duplicated_pmhc_embedding = self.user_pmhc_embedding_dict['complete'][split][0][0, :].repeat(
+                                    b_size, 1
+                                )
+                                print("\tPredicting background tcrs\n")
+                                background_result = self.classifier_model.model_list[model_id].predict(
+                                    pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
+                                    tcr_embedding=background_tcr_embedding)
+                                # For all the user given tcrs we will use the same set of 
+                                # background tcrs 
+                                for partition in self.user_df_dict[missingness][split]:
+                                    n_rows = self.user_df_dict[missingness][split][partition].shape[0]
+                                    for row in range(n_rows):
+                                        # Update ranking (not percentile ranking)
+                                        current_position = np.sum(background_result > self.user_df_dict[missingness][split][partition].at[row, 'logit_m_'+str(model_id)])
+                                        self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] += current_position
                                 
-                                check_size_ind = 0
-                                user_output_position = 0
-                                b_size_so_far = 0
-                                for batch_size_ind, tcrs in enumerate(data_loader):
-                                    b_size = batch_size[batch_size_ind]
-                                    b_size_so_far += b_size
-                                    print(
-                                        "Verifying using "+str(check_size[check_size_ind]) + " background tcrs\n")
-                                    print("\tLoading minibatch of " +
-                                        str(tcrs.shape[0]) + " tcrs\n")
-                                    #####################################
-                                    # DEPENDING ON WHETHER THE USER WANTS TO LOAD EMBEDDING OR NOT
-                                    # THIS PART OF THE CODE WILL CHANGE
-                                    print("\tEncoding background tcrs\n")
-                                    background_tcr_embedding, _ = self.encoder.encode(
-                                        df=tcrs, is_embedding=load_embedding)
-                                    duplicated_pmhc_embedding = self.user_pmhc_embedding_dict['complete'][partition][row, :].repeat(
-                                        b_size, 1
-                                    )
-                                    #####################################
-                                    print("\tPredicting background tcrs\n")
-                                    background_result = self.classifier_model.model_list[model_id].predict(
-                                        pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
-                                        tcr_embedding=background_tcr_embedding)
-                                    # Compute how many backgrounds are "better" than user output
-                                    # Therefore, the closer the value is to 0
-                                    # the more likely that the model thinks the pair will bind
-                                    current_position = np.sum(
-                                        background_result > self.user_df_dict[missingness][partition]['logit_m_'+str(model_id)][row])
-                                    print("\tRank in the current minibatch is " +
-                                        str(current_position+1)+"th out of "+str(b_size+1)+"\n")
-                                    user_output_position += current_position
-                                    print("\tRank in the current batch so far is " +
-                                        str(user_output_position+1)+"th out of "+str(b_size_so_far+1)+"\n")
-                                    if batch_finished_indicator[batch_size_ind]:
-                                        rank_percentile = user_output_position / (check_size[check_size_ind]+1)
-                                        print("\tCurrent batch is done. The final position is "+str(
-                                            user_output_position+1)+" out of "+str(check_size[check_size_ind]+1)+"\n")
-                                        self.user_df_dict[missingness][partition].at[row, 'percentile_rank_m_'+
-                                                                                    str(model_id)+"_"+str(b)] = rank_percentile
-                                        if (rank_percentile > rank_threshold[check_size_ind]):
-                                            # If the threshold is 0.03 and the rank_percentile
-                                            # is greater than that, this means that more than
-                                            # 3% of the background is 'better'
-                                            break
-                                        user_output_position = 0
-                                        b_size_so_far = 0
-                                        check_size_ind += 1
+                                if batch_finished_indicator[batch_size_ind]:
+                                    # If the current batch is finished 
+                                    # We first extract the logits for all user given pairs 
+                                    user_temp = np.array([logit for partition in self.user_df_dict[missingness][split]
+                                                 for logit in self.user_df_dict[missingness][split][partition]['logit_m_'+str(model_id)].values])
+                                    
+                                    # When computing the final percentile ranks, we include 
+                                    # results from the background tcrs as well as 
+                                    # the user given pairs 
+                                    # This way, the percentile rankings would be consistent with the logits  
+                                    for partition in self.user_df_dict[missingness][split]:
+                                        n_rows = self.user_df_dict[missingness][split][partition].shape[0]
+                                        for row in range(n_rows):
+                                            # Update rankings 
+                                            current_position = np.sum(user_temp > self.user_df_dict[missingness][split][partition].at[row, 'logit_m_'+str(model_id)])
+                                            self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] += current_position
+                                            # Then, compute the final percentile ranking
+                                            rank_percentile = self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] / (check_size[check_size_ind]+len(user_temp))
+                                            self.user_df_dict[missingness][split][partition].at[row, 'percentile_rank_m_'+
+                                                                                           str(model_id)+"_"+str(b)] = rank_percentile
+                                    
+                                    # Finally, we extract all percentile rankings 
+                                    user_temp = np.array([logit for partition in self.user_df_dict[missingness][split]
+                                                 for logit in self.user_df_dict[missingness][split][partition]['percentile_rank_m_'+
+                                                                                                                str(model_id)+"_"+str(b)].values])
+                                    
+                                    # If all percentile rankings are greater than the current threshold 
+                                    # we stop the validation. 
+                                    # The last threhold should be 0 (padded)
+                                    if np.all(user_temp > rank_threshold[check_size_ind]):
+                                        break
+                                    
+                                    # Else, we update the indicies 
+                                    b_size_so_far = 0
+                                    check_size_ind += 1
+
 
     def _amalgamate(self) -> Tuple[dict, dict, dict]:
         """Amalgamate all the partitions 
@@ -454,20 +489,23 @@ class pMTnet_Omni_class:
                 pmhc_dict[missingness] = {}
                 continue
             # DF
-            df = [self.user_df_dict[missingness][partition]
-                  for partition in self.user_df_dict[missingness]]
+            df = [self.user_df_dict[missingness][split][partition]
+                  for split in self.user_df_dict[missingness]
+                  for partition in self.user_df_dict[missingness][split]]
             df = pd.concat(df, axis=0, ignore_index=True)
             df_dict[missingness] = df
             # TCRS
-            tcrs = [self.user_tcr_embedding_dict[missingness][partition]
-                    for partition in self.user_tcr_embedding_dict[missingness]]
+            tcrs = [self.user_tcr_embedding_dict[missingness][split][partition]
+                    for split in self.user_tcr_embedding_dict[missingness]
+                    for partition in self.user_tcr_embedding_dict[missingness][split]]
             tcrs = torch.cat(tcrs, dim=0)
             tcr_dict[missingness] = tcrs
             # pMHC
             # We propagate across missingness as we assume users use this function for
             # validation, visulation, etc
-            pmhcs = [self.user_pmhc_embedding_dict['complete'][partition]
-                     for partition in self.user_pmhc_embedding_dict['complete']]
+            pmhcs = [self.user_pmhc_embedding_dict['complete'][split][partition]
+                     for split in self.user_pmhc_embedding_dict['complete']
+                     for partition in self.user_pmhc_embedding_dict['complete'][split]]
             pmhcs = torch.cat(pmhcs, dim=0)
             pmhc_dict[missingness] = pmhcs
 
@@ -564,9 +602,10 @@ class pMTnet_Omni_class:
                 for missingness in self.user_df_dict:
                     if len(self.user_df_dict[missingness]) == 0:
                         continue
-                    for partition in self.user_df_dict[missingness]:
-                        col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(self.ensemble_size)]
-                        self.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = self.user_df_dict[missingness][partition][col_names].mean(axis=1)
+                    for split in self.user_df_dict[missingness]:
+                        for partition in self.user_df_dict[missingness][split]:
+                            col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(self.ensemble_size)]
+                            self.user_df_dict[missingness][split][partition]["percentile_rank_" +str(b)] = self.user_df_dict[missingness][split][partition][col_names].mean(axis=1)
             
         if output_file_path is not None:
             filename, _ = os.path.splitext(output_file_path)

@@ -3,16 +3,16 @@ import os
 import pandas as pd
 import numpy as np
 
-from pMTnet_Omni_Document.data_curation import read_file
+from pMTnet_Omni_Document import read_file
 from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
 extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
 
 @pytest.mark.parametrize("seed, extra_mhc_dict, partition_size, create_incomplete_data, expected", [
-    (42, extra_mhc_dict, 5, False, [1, 0, 0, 1]),
-    (None, extra_mhc_dict, 2, False, [2, 0, 0, 2]),
-    (42, "./tests/test_data/extra_mhc_dict.json", 5, True, [1, 1, 1, 1]),
-    (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [2, 2, 2, 2])
+    (42, extra_mhc_dict, 5, False, [4, 0, 0, 4]),
+    (None, extra_mhc_dict, 2, False, [4, 0, 0, 4]),
+    (42, "./tests/test_data/extra_mhc_dict.json", 5, True, [4, 4, 4, 4]),
+    (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [4, 4, 4, 4])
 ])
 def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
     
@@ -129,9 +129,10 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
         for missingness in pmtnet.user_df_dict:
             if len(pmtnet.user_df_dict[missingness]) == 0:
                 continue
-            for partition in pmtnet.user_df_dict[missingness]:
-                col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
-                pmtnet.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][partition][col_names].mean(axis=1)
+            for split in pmtnet.user_df_dict[missingness]:
+                for partition in pmtnet.user_df_dict[missingness][split]:
+                    col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
+                    pmtnet.user_df_dict[missingness][split][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][split][partition][col_names].mean(axis=1)
     os.remove("./tests/test_data/pmtnet_omni_predict_log_0.txt")
     try:
         pmtnet.validate(true_labels=true_labels)
