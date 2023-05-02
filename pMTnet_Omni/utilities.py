@@ -256,7 +256,8 @@ def partition_dataframe(df: pd.DataFrame,
 
 
 def split_dataframe(df: pd.DataFrame,
-                    by_columns: list) -> dict:
+                    by_columns: list,
+                    partition_size: int=500) -> Tuple[dict, dict]:
     """Split a dataframe by columns 
 
     Parameters
@@ -265,7 +266,8 @@ def split_dataframe(df: pd.DataFrame,
         The dataframe to be splitted 
     by_columns : list
         Columns to be used for splitting 
-
+    partition_size: int 
+        The chunk size
     Returns
     -------
     dict
@@ -276,13 +278,16 @@ def split_dataframe(df: pd.DataFrame,
     subdf = deepcopy(df[by_columns])
     subdf.drop_duplicates(inplace=True,
                           ignore_index=True)
+    ref_dict = {"partitions": partition_dataframe(df=subdf,
+                                                  partition_size=partition_size)}
     for i in range(subdf.shape[0]):
         key = tuple(subdf.iloc[i,:])
         value = deepcopy(df)
         for n, col in enumerate(by_columns):
             value = value[value[col] == key[n]].reset_index(drop=True)
         splits[key] = value   
-    return splits        
+        ref_dict[key] = None
+    return splits, ref_dict
 
 
 def setup_seed(seed: int) -> None:

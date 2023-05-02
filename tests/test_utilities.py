@@ -348,7 +348,7 @@ def test_partition_dataframe(df, partition_size, expected):
     (pd.DataFrame({"a": [1,1,2,3], "b": [4,5,6,7]}), ["a"], [2,1,1])
 ])
 def test_split_dataframe(df, by_columns, expected):
-    splits = split_dataframe(df=df, by_columns=by_columns)
+    splits, _ = split_dataframe(df=df, by_columns=by_columns)
     size_list = []
     for i in splits:
         size_list.append(splits[i].shape[0])

@@ -102,7 +102,8 @@ class pMTnet_Omni_class:
                                         "alpha missing": {},
                                         "beta missing": {}}
         # As pmhc won't have missingnesses
-        self.user_pmhc_embedding_dict = {"complete": {}}
+        # and we will split the dataframe by pmhc
+        self.user_pmhc_embedding_dict = {}
 
         # Create the encoder
 
@@ -161,14 +162,17 @@ class pMTnet_Omni_class:
         
         user_df['logit'] = np.inf 
         # Split the dataframe by pmhc 
-        splits = split_dataframe(df=user_df,
-                                 by_columns=['peptide', 
-                                             'mhca',
-                                             'mhcb',
-                                             'mhcaseq',
-                                             'mhcbseq',
-                                             'pmhc_species'])
-        
+        splits, self.user_pmhc_embedding_dict = split_dataframe(df=user_df,
+                                                                by_columns=['peptide', 
+                                                                            'mhca',
+                                                                            'mhcb',
+                                                                            'mhcaseq',
+                                                                            'mhcbseq',
+                                                                            "mhc_class",
+                                                                            'pmhc_species',
+                                                                            "mhca_use_seq", 
+                                                                            "mhcb_use_seq"],
+                                                                partition_size=partition_size)
         for s in splits:
             self.user_df_dict['complete'][s] = partition_dataframe(
                                                 df=splits[s], 
@@ -184,15 +188,23 @@ class pMTnet_Omni_class:
             Whether or not to print out model process 
 
         """
+        # We will encode pmhc first 
+        for partition in self.user_pmhc_embedding_dict['partitions']:
+            _, pmhc_embedding = self.encoder.encode(df=self.user_pmhc_embedding_dict['partitions'][partition],
+                                                    is_embedding=False,
+                                                    verbose=verbose)
+            for i in range(self.user_pmhc_embedding_dict['partitions'][partition].shape[0]):
+                key = tuple(self.user_pmhc_embedding_dict['partitions'][partition].iloc[i,:])
+                self.user_pmhc_embedding_dict[key] = pmhc_embedding[[i],:].to('cpu')
+            
+        
         for split in self.user_df_dict['complete']:
             self.user_tcr_embedding_dict['complete'][split] = {}
-            self.user_pmhc_embedding_dict['complete'][split] = {}
             for partition in self.user_df_dict['complete'][split]:
-                tcr_embedding, pmhc_embedding = self.encoder.encode(df=self.user_df_dict['complete'][split][partition],
-                                                                    is_embedding=False,
-                                                                    verbose=verbose)
+                tcr_embedding, _ = self.encoder.encode(df=self.user_df_dict['complete'][split][partition][["vaseq", "vbseq", "cdr3a", "cdr3b"]],
+                                                        is_embedding=False,
+                                                        verbose=verbose)
                 self.user_tcr_embedding_dict['complete'][split][partition] = tcr_embedding.to('cpu')
-                self.user_pmhc_embedding_dict['complete'][split][partition] = pmhc_embedding.to('cpu')
 
     def _create_incomplete_data(self) -> None:
         """Create incomplete data based on the user dataframe 
@@ -251,8 +263,11 @@ class pMTnet_Omni_class:
                 continue
             for split in self.user_df_dict[missingness]:
                 for partition in self.user_df_dict[missingness][split]:
+                    duplicated_pmhc_embedding = self.user_pmhc_embedding_dict[split].repeat(
+                                    self.user_df_dict[missingness][split][partition].shape[0], 1
+                                )
                     df_output = self.classifier_model.predict(
-                        pmhc_embedding=self.user_pmhc_embedding_dict['complete'][split][partition].to(self.model_device),
+                        pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
                         tcr_embedding=self.user_tcr_embedding_dict[missingness][split][partition].to(self.model_device))
                     for id in range(self.ensemble_size):
                         self.user_df_dict[missingness][split][partition]['logit_m_'+str(id)] = df_output[:,id]
@@ -420,7 +435,7 @@ class pMTnet_Omni_class:
                                     df=tcrs, is_embedding=load_embedding)
                                 # Since in each split, pmhc is identical ,
                                 # we will just repeat the first occurance 
-                                duplicated_pmhc_embedding = self.user_pmhc_embedding_dict['complete'][split][0][0, :].repeat(
+                                duplicated_pmhc_embedding = self.user_pmhc_embedding_dict[split].repeat(
                                     b_size, 1
                                 )
                                 print("\tPredicting background tcrs\n")
@@ -503,9 +518,8 @@ class pMTnet_Omni_class:
             # pMHC
             # We propagate across missingness as we assume users use this function for
             # validation, visulation, etc
-            pmhcs = [self.user_pmhc_embedding_dict['complete'][split][partition]
-                     for split in self.user_pmhc_embedding_dict['complete']
-                     for partition in self.user_pmhc_embedding_dict['complete'][split]]
+            pmhcs = [self.user_pmhc_embedding_dict[split]
+                        for split in self.user_pmhc_embedding_dict if split != "partitions"]
             pmhcs = torch.cat(pmhcs, dim=0)
             pmhc_dict[missingness] = pmhcs
 
