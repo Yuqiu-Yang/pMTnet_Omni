@@ -144,6 +144,7 @@ class pMTnet_Omni_class:
             Other key-value pairs for the pd.read_csv function
 
         """
+        print("Reading user data frame...\n")
         if isinstance(user_data, str):
             # if the path is provided 
             # we use pd.read_csv to read the data 
@@ -162,6 +163,7 @@ class pMTnet_Omni_class:
         
         user_df['logit'] = np.inf 
         # Split the dataframe by pmhc 
+        print("Splitting the dataframe per pmhc...\n")
         splits, self.user_pmhc_embedding_dict = split_dataframe(df=user_df,
                                                                 by_columns=['peptide', 
                                                                             'mhca',
