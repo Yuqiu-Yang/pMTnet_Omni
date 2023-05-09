@@ -275,9 +275,11 @@ def split_dataframe(df: pd.DataFrame,
         The key would be unique values from the dataframe. 
     """
     splits = {}
-    subdf = deepcopy(df[by_columns])
-    subdf.drop_duplicates(inplace=True,
-                          ignore_index=True)
+    subdf = df[by_columns].groupby(by_columns,
+                                   sort=False, axis=0, dropna=False).size().reset_index()
+
+    subdf.drop(columns=[0], axis=1, inplace=True)
+    
     ref_dict = {"partitions": partition_dataframe(df=subdf,
                                                   partition_size=partition_size)}
     for i in range(subdf.shape[0]):
