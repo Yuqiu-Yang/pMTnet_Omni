@@ -158,8 +158,8 @@ class pMTnet_Omni_class:
         # Make sure that all the NaN are converted to ""
         user_df = user_df.fillna("")
         # Add output columns 
-        for id in range(self.ensemble_size):
-            user_df['logit_m_'+str(id)] = np.inf
+        for model_id in range(self.ensemble_size):
+            user_df['logit_m_'+str(model_id)] = np.inf
         
         user_df['logit'] = np.inf 
         # Split the dataframe by pmhc 
@@ -271,8 +271,8 @@ class pMTnet_Omni_class:
                     df_output = self.classifier_model.predict(
                         pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
                         tcr_embedding=self.user_tcr_embedding_dict[missingness][split][partition].to(self.model_device))
-                    for id in range(self.ensemble_size):
-                        self.user_df_dict[missingness][split][partition]['logit_m_'+str(id)] = df_output[:,id]
+                    for model_id in range(self.ensemble_size):
+                        self.user_df_dict[missingness][split][partition]['logit_m_'+str(model_id)] = df_output[:,model_id]
                     self.user_df_dict[missingness][split][partition]['logit'] = np.mean(df_output, axis=1)
                 
                 
@@ -377,7 +377,8 @@ class pMTnet_Omni_class:
                 # Make sure check size is in an ascending order
                 print("Model "+str(model_id)+"... \n")
                 # We sort the check size in an ascending order
-                check_size = np.sort(check_size)
+                # and we make sure that the input is a list 
+                check_size = np.sort(list(check_size))
                 
                 # We first make sure that the variable is an 1d np.array 
                 # Note that this also works if the variable is a float 
@@ -409,14 +410,14 @@ class pMTnet_Omni_class:
                     for missingness in self.user_df_dict:
                         if len(self.user_df_dict[missingness]) == 0:
                             continue
-                        for split in self.user_df_dict[missingness]:
-                            # Creat columns for percentile ranks 
+                        for split in tqdm(self.user_df_dict[missingness], position=1, leave=False):
+                            # Create columns for percentile ranks 
                             for partition in self.user_df_dict[missingness][split]:
                                 self.user_df_dict[missingness][split][partition]["percentile_rank_m_" + str(model_id) +
                                                                                  "_"+str(b)] = np.inf
                                 self.user_df_dict[missingness][split][partition]["rank_m_" + str(model_id) + "_"+str(b)] = 0
                             # Depending on the species, we use their corresponding dataloader
-                            if split[-1] == "human":
+                            if self.user_df_dict[missingness][split][partition].at[0, "tcr_species"] == "human":
                                 data_loader = background_human_dataloader
                             else:
                                 data_loader = background_mouse_dataloader
@@ -475,21 +476,29 @@ class pMTnet_Omni_class:
                                                                                            str(model_id)+"_"+str(b)] = rank_percentile
                                     
                                     # Finally, we extract all percentile rankings 
-                                    user_temp = np.array([logit for partition in self.user_df_dict[missingness][split]
-                                                 for logit in self.user_df_dict[missingness][split][partition]['percentile_rank_m_'+
+                                    user_temp = np.array([rank for partition in self.user_df_dict[missingness][split]
+                                                 for rank in self.user_df_dict[missingness][split][partition]['percentile_rank_m_'+
                                                                                                                 str(model_id)+"_"+str(b)].values])
                                     
                                     # If all percentile rankings are greater than the current threshold 
                                     # we stop the validation. 
-                                    # The last threhold should be 0 (padded)
+                                    # The last threshold should be 0 (padded)
                                     if np.all(user_temp > rank_threshold[check_size_ind]):
                                         break
                                     
-                                    # Else, we update the indicies 
-                                    b_size_so_far = 0
-                                    check_size_ind += 1
-
-
+                                    # Else, we reset the ranks and percentile ranks 
+                                    # And we update the indicies 
+                                    if check_size_ind < len(check_size)-1:
+                                        # This means that we still have some more checks to do 
+                                        for partition in self.user_df_dict[missingness][split]:
+                                            self.user_df_dict[missingness][split][partition]["percentile_rank_m_" + str(model_id) +
+                                                                                            "_"+str(b)] = np.inf
+                                            self.user_df_dict[missingness][split][partition]["rank_m_" + str(model_id) + "_"+str(b)] = 0
+                                        # update the indicies 
+                                        b_size_so_far = 0
+                                        check_size_ind += 1
+                                    
+                                    
     def _amalgamate(self) -> Tuple[dict, dict, dict]:
         """Amalgamate all the partitions 
 
@@ -603,7 +612,7 @@ class pMTnet_Omni_class:
         if compute_percentile_rank:
             # For each model in the ensemble, we compute the percentile rank
             print("Computing percentile ranks for each model in the ensemble\n")
-            for id in tqdm(range(self.ensemble_size)):
+            for model_id in tqdm(range(self.ensemble_size), position=0):
                 self._compute_percentile_rank(rank_threshold=rank_threshold,
                                             B=B,
                                             load_embedding=load_embedding,
@@ -612,7 +621,7 @@ class pMTnet_Omni_class:
                                             load_size=load_size,
                                             minibatch_size=minibatch_size,
                                             log_file_path=log_file_path,
-                                            model_id=id)
+                                            model_id=model_id)
             # We average the percentile ranks 
             for b in range(B):
                 for missingness in self.user_df_dict:
