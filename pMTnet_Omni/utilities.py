@@ -2,6 +2,7 @@
 import os
 import warnings
 import pandas as pd
+from copy import deepcopy
 
 # Numeric manipulation
 import numpy as np
@@ -252,6 +253,43 @@ def partition_dataframe(df: pd.DataFrame,
                            partition_size: (i+1)*partition_size].reset_index(drop=True)
         partitions[i].columns = column_names
     return partitions
+
+
+def split_dataframe(df: pd.DataFrame,
+                    by_columns: list,
+                    partition_size: int=500) -> Tuple[dict, dict]:
+    """Split a dataframe by columns 
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to be splitted 
+    by_columns : list
+        Columns to be used for splitting 
+    partition_size: int 
+        The chunk size
+    Returns
+    -------
+    dict
+        A dictionary of section of the original dataframe. 
+        The key would be unique values from the dataframe. 
+    """
+    splits = {}
+    subdf = df[by_columns].groupby(by_columns,
+                                   sort=False, axis=0, dropna=False).size().reset_index()
+
+    subdf.drop(columns=[0], axis=1, inplace=True)
+    
+    ref_dict = {"partitions": partition_dataframe(df=subdf,
+                                                  partition_size=partition_size)}
+    for i in range(subdf.shape[0]):
+        key = tuple(subdf.iloc[i,:])
+        value = deepcopy(df)
+        for n, col in enumerate(by_columns):
+            value = value[value[col] == key[n]].reset_index(drop=True)
+        splits[key] = value   
+        ref_dict[key] = None
+    return splits, ref_dict
 
 
 def setup_seed(seed: int) -> None:

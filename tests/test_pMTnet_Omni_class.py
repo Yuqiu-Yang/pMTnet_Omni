@@ -3,16 +3,16 @@ import os
 import pandas as pd
 import numpy as np
 
-from pMTnet_Omni_Document.data_curation import read_file
+from pMTnet_Omni_Document import read_file
 from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
 extra_mhc_dict = {"AAAA": np.zeros((380, 1280))}
 
 @pytest.mark.parametrize("seed, extra_mhc_dict, partition_size, create_incomplete_data, expected", [
-    (42, extra_mhc_dict, 5, False, [1, 0, 0, 1]),
-    (None, extra_mhc_dict, 2, False, [2, 0, 0, 2]),
-    (42, "./tests/test_data/extra_mhc_dict.json", 5, True, [1, 1, 1, 1]),
-    (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [2, 2, 2, 2])
+    (42, extra_mhc_dict, 5, False, [4, 0, 0, 1]),
+    (None, extra_mhc_dict, 2, False, [4, 0, 0, 2]),
+    (42, "./tests/test_data/extra_mhc_dict.json", 5, True, [4, 4, 4, 1]),
+    (None, "./tests/test_data/extra_mhc_dict.json", 3, True, [4, 4, 4, 2])
 ])
 def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, create_incomplete_data, expected):
     
@@ -22,7 +22,7 @@ def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, crea
                                data_dir="./tests/test_data/",
                                seed=seed,
                                extra_mhc_dict=extra_mhc_dict)
-    pmtnet.read_user_df(
+    pmtnet._read_user_df(
         user_data=df, partition_size=partition_size)
     pmtnet._encode_user_df()
     if create_incomplete_data:
@@ -30,7 +30,7 @@ def test_pMTnet_Omni_class_partitions(seed, extra_mhc_dict, partition_size, crea
     assert (len(pmtnet.user_df_dict['complete']) == expected[0]) and \
         (len(pmtnet.user_tcr_embedding_dict['alpha missing']) == expected[1]) and \
         (len(pmtnet.user_tcr_embedding_dict['beta missing']) == expected[2]) and \
-        (len(pmtnet.user_pmhc_embedding_dict['complete']) == expected[3])
+        (len(pmtnet.user_pmhc_embedding_dict['partitions']) == expected[3])
 
 
 @pytest.mark.parametrize("partition_size, create_incomplete_data, load_embedding", [
@@ -44,7 +44,7 @@ def test_pMTnet_Omni_class_prediction(partition_size, create_incomplete_data, lo
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./tests/test_data/",
                                seed=None)
-    pmtnet.read_user_df(
+    pmtnet._read_user_df(
         user_data="./tests/test_data/df_curated.csv", partition_size=partition_size, sep=",")
     pmtnet._encode_user_df()
     if create_incomplete_data:
@@ -129,9 +129,10 @@ def test_pMTnet_Omni_validation(create_incomplete_data, true_labels):
         for missingness in pmtnet.user_df_dict:
             if len(pmtnet.user_df_dict[missingness]) == 0:
                 continue
-            for partition in pmtnet.user_df_dict[missingness]:
-                col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
-                pmtnet.user_df_dict[missingness][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][partition][col_names].mean(axis=1)
+            for split in pmtnet.user_df_dict[missingness]:
+                for partition in pmtnet.user_df_dict[missingness][split]:
+                    col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(pmtnet.ensemble_size)]
+                    pmtnet.user_df_dict[missingness][split][partition]["percentile_rank_" +str(b)] = pmtnet.user_df_dict[missingness][split][partition][col_names].mean(axis=1)
     os.remove("./tests/test_data/pmtnet_omni_predict_log_0.txt")
     try:
         pmtnet.validate(true_labels=true_labels)
