@@ -18,7 +18,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 # Typing
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, Callable
 
 
 def plot_validation_curve(result_dicts: dict,
@@ -229,7 +229,7 @@ def batchify_check_size(check_size: list = [10, 20],
 
 
 def partition_dataframe(df: pd.DataFrame,
-                        partition_size: int) -> dict:
+                        partition_size: int) -> list:
     """Partitions a given dataframe into chunks of the given size 
 
     Parameters
@@ -241,55 +241,54 @@ def partition_dataframe(df: pd.DataFrame,
 
     Returns
     ---------
-    dict
-        A dictionary of all the partitions 
+    list
+        A list of all the partitions 
 
     """
-    partitions = {}
+    partitions = []
     n_partitions = math.ceil(df.shape[0]/partition_size)
     column_names = df.columns
     for i in range(n_partitions):
-        partitions[i] = df[i *
-                           partition_size: (i+1)*partition_size].reset_index(drop=True)
-        partitions[i].columns = column_names
+        temp = df[i * partition_size: (i+1)*partition_size].reset_index(drop=True)
+        temp.columns = column_names
+        partitions.append(temp) 
     return partitions
 
 
-def split_dataframe(df: pd.DataFrame,
-                    by_columns: list,
-                    partition_size: int=500) -> Tuple[dict, dict]:
-    """Split a dataframe by columns 
+def create_incomplete_tcrs(tcr_df: pd.DataFrame,
+                           tcr_embedding: torch.tensor) -> dict:
+    """Create incomplete data based on the user dataframe 
 
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The dataframe to be splitted 
-    by_columns : list
-        Columns to be used for splitting 
-    partition_size: int 
-        The chunk size
-    Returns
-    -------
-    dict
-        A dictionary of section of the original dataframe. 
-        The key would be unique values from the dataframe. 
+    This function is only supposed to be used during validation.
+    The function will duplicate the original dataframe twice. 
+    For the first duplicate, all tcr information on the alpha chain will be removed.
+    For the second duplicate, all tcr information on the beta chain will be removed. 
+
     """
-    splits = {}
-    subdf = df[by_columns].groupby(by_columns,
-                                   sort=False, axis=0, dropna=False).size().reset_index()
-
-    subdf.drop(columns=[0], axis=1, inplace=True)
+    tcr_df_alpha_missing = deepcopy(tcr_df)
+    tcr_df_alpha_missing['va'] = ""
+    tcr_df_alpha_missing['vaseq'] = ""
+    tcr_df_alpha_missing['cdr3a'] = ""
+    # Manipulate tcr embedding
+    tcr_embedding_alpha_missing = tcr_embedding.detach().clone()
+    # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+    tcr_embedding_alpha_missing[:, 0:35] = 0
     
-    ref_dict = {"partitions": partition_dataframe(df=subdf,
-                                                  partition_size=partition_size)}
-    for i in range(subdf.shape[0]):
-        key = tuple(subdf.iloc[i,:])
-        value = deepcopy(df)
-        for n, col in enumerate(by_columns):
-            value = value[value[col] == key[n]].reset_index(drop=True)
-        splits[key] = value   
-        ref_dict[key] = None
-    return splits, ref_dict
+    tcr_df_beta_missing = deepcopy(tcr_df)
+    tcr_df_beta_missing['vb'] = ""
+    tcr_df_beta_missing['vbseq'] = ""
+    tcr_df_beta_missing['cdr3b'] = ""
+    # Manipulate tcr embedding
+    tcr_embedding_beta_missing = tcr_embedding.detach().clone()
+    # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
+    tcr_embedding_beta_missing[:, 35:70] = 0
+
+    return {
+        "tcr_df_alpha_missing": tcr_df_alpha_missing,
+        "tcr_embedding_alpha_missing": tcr_embedding_alpha_missing,
+        "tcr_df_beta_missing": tcr_df_beta_missing,
+        "tcr_embedding_beta_missing": tcr_embedding_beta_missing
+    }
 
 
 def setup_seed(seed: int) -> None:
@@ -308,6 +307,26 @@ def setup_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False
+
+
+def coroutine(func: Callable) -> Callable:
+    """A coroutine function to be used as a decorator
+
+    Parameters
+    ----------
+    func : Callable
+        A function to be used as a generator 
+    
+    Returns
+    --------
+    Callable
+        A generator
+    """
+    def start(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        next(cr)
+        return cr
+    return start
 
 
 def dict_to_dir(directory_dict: dict,

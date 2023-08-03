@@ -27,9 +27,10 @@ try:
 except ImportError:
     from pMTnet_Omni.models.load_dummies import ensemble_pMHCTCR
 from pMTnet_Omni.encoders.encoder_class import encoder_class
+from pMTnet_Omni.pmhc_tcr_class import pmhc_class
 from pMTnet_Omni.background_tcr_loaders import background_species_tcr_dataset_class, background_species_tcr_dataloader_class
 # from pMTnet_Omni_Document.data_curation import read_file
-from pMTnet_Omni.utilities import batchify_check_size, setup_seed, partition_dataframe, split_dataframe, check_data_dir_structure
+from pMTnet_Omni.utilities import batchify_check_size, setup_seed, check_data_dir_structure
 
 
 class pMTnet_Omni_class:
@@ -94,17 +95,9 @@ class pMTnet_Omni_class:
             # this will give us {}
             self.extra_mhc_dict = {k: np.asarray(v) for k, v in temp_dict.items()}
         
-        # User df & embeddings
-        self.user_df_dict = {"complete": {},
-                             "alpha missing": {},
-                             "beta missing": {}}
-        self.user_tcr_embedding_dict = {"complete": {},
-                                        "alpha missing": {},
-                                        "beta missing": {}}
-        # As pmhc won't have missingnesses
-        # and we will split the dataframe by pmhc
-        self.user_pmhc_embedding_dict = {}
-
+        # pmhc object 
+        self.pmhc_object = None
+        
         # Create the encoder
 
         vGdVAEacheckpoint_path = encoder_path[0]
@@ -128,18 +121,28 @@ class pMTnet_Omni_class:
                                                 classifier_path=classifier_path)
         self.ensemble_size = len(classifier_path)
 
-    def _read_user_df(self,
+    def read_user_df(self,
                       user_data: Union[str, pd.DataFrame],
                       partition_size: int=500,
+                      verbose: bool = False,
                       **kwargs) -> None:
-        """Read in user dataframe
-
+        """Read in user dataframe and encode pMHCs and TCRs 
+        
+        The function will first read in the dataframe/file provided by the user. 
+        NOTE: The function DOES NOT perform data curation. This should be done 
+        by another package/function. 
+        
+        The function will then assign a unique ID to each observation, pmhc, and 
+        tcr. And it will group observations by pmhcs. 
+        
         Parameters
         ----------
         user_data: str, pd.DataFrame
             The path to the user dataframe or the actual dataframe
         partition_size: int 
             Size of each partition. Used to save GPU memory.
+        verbose: bool
+            Whether or not to print out model process 
         **kwargs
             Other key-value pairs for the pd.read_csv function
 
@@ -157,128 +160,90 @@ class pMTnet_Omni_class:
             raise TypeError("user_data should either the path to the file or a pd.DataFrame")
         # Make sure that all the NaN are converted to ""
         user_df = user_df.fillna("")
-        # Add output columns 
-        for model_id in range(self.ensemble_size):
-            user_df['logit_m_'+str(model_id)] = np.inf
         
-        user_df['logit'] = np.inf 
-        # Split the dataframe by pmhc 
-        print("Splitting the dataframe per pmhc...\n")
-        splits, self.user_pmhc_embedding_dict = split_dataframe(df=user_df,
-                                                                by_columns=['peptide', 
-                                                                            'mhca',
-                                                                            'mhcb',
-                                                                            'mhcaseq',
-                                                                            'mhcbseq',
-                                                                            "mhc_class",
-                                                                            'pmhc_species',
-                                                                            "mhca_use_seq", 
-                                                                            "mhcb_use_seq"],
-                                                                partition_size=partition_size)
-        for s in splits:
-            self.user_df_dict['complete'][s] = partition_dataframe(
-                                                df=splits[s], 
-                                                partition_size=partition_size)
-
-    def _encode_user_df(self,
-                        verbose: bool = True) -> None:
-        """Encode pMHC and TCRs provided in the user dataframe 
-
-        Parameters
-        ---------
-        verbose: bool
-            Whether or not to print out model process 
-
-        """
-        # We will encode pmhc first 
-        for partition in self.user_pmhc_embedding_dict['partitions']:
-            _, pmhc_embedding = self.encoder.encode(df=self.user_pmhc_embedding_dict['partitions'][partition],
-                                                    is_embedding=False,
-                                                    verbose=verbose)
-            for i in range(self.user_pmhc_embedding_dict['partitions'][partition].shape[0]):
-                key = tuple(self.user_pmhc_embedding_dict['partitions'][partition].iloc[i,:])
-                self.user_pmhc_embedding_dict[key] = pmhc_embedding[[i],:].to('cpu')
-            
+        # We will perform a series of operations that aim to 
+        # group the observations by pmhcs and tcrs 
         
-        for split in self.user_df_dict['complete']:
-            self.user_tcr_embedding_dict['complete'][split] = {}
-            for partition in self.user_df_dict['complete'][split]:
-                tcr_embedding, _ = self.encoder.encode(df=self.user_df_dict['complete'][split][partition][["vaseq", "vbseq", "cdr3a", "cdr3b"]],
-                                                        is_embedding=False,
-                                                        verbose=verbose)
-                self.user_tcr_embedding_dict['complete'][split][partition] = tcr_embedding.to('cpu')
-
-    def _create_incomplete_data(self) -> None:
-        """Create incomplete data based on the user dataframe 
-
-        This function is only supposed to be used during validation.
-        The function will duplicate the original dataframe twice. 
-        For the first duplicate, all tcr information on the alpha chain will be removed.
-        For the second duplicate, all tcr information on the beta chain will be removed. 
-
-        """
-        for split in self.user_df_dict['complete']:
-            self.user_df_dict['alpha missing'][split] = {}
-            self.user_df_dict['beta missing'][split] = {}
-            self.user_tcr_embedding_dict['alpha missing'][split] = {}
-            self.user_tcr_embedding_dict['beta missing'][split] = {}
+        # First we index the observations 
+        user_df['observation_id'] = user_df.index
+        # Columns related to pmhc 
+        pmhc_cols = ['peptide', 
+                    'mhca',
+                    'mhcb',
+                    'mhcaseq',
+                    'mhcbseq',
+                    "mhc_class",
+                    'pmhc_species',
+                    "mhca_use_seq", 
+                    "mhcb_use_seq"]
+        # Columns related to tcrs 
+        tcr_cols = ["va", "vb", "vaseq", "vbseq", "cdr3a", "cdr3b", "tcr_species"]
+        # Generate pmhc_id and tcr_id for each observation 
+        user_df["pmhc_id"] = user_df.groupby(pmhc_cols).ngroup()
+        user_df["tcr_id"] = user_df.groupby(tcr_cols).ngroup()
+        
+        # For pmhc_df, we keep all observation ids 
+        # and the first occurrence of that pmhc 
+        pmhc_df = user_df.groupby(by=['pmhc_id'], 
+                                  as_index=True).agg({**{"observation_id": list},
+                                                      **{key: "first" for key in pmhc_cols}})
+        # Sort by id (index) to make sure id 0 is the first one 
+        pmhc_df.sort_index(axis=0, ascending=True, inplace=True)
+        # Again, keep all observation ids 
+        # and the first occurrence of that tcr 
+        tcr_df = user_df.groupby(by=['tcr_id'], 
+                                 as_index=True).agg({**{"observation_id": list},
+                                                     **{key: "first" for key in tcr_cols}})
+        tcr_df.sort_index(axis=0, ascending=True, inplace=True)
+        # 
+        id_df = user_df.groupby(['pmhc_id'], as_index=False)[["tcr_id"]].agg(lambda x: [y for y in x.unique()])
+        
+        # Other df 
+        other_df = user_df[user_df.columns.difference(pmhc_cols + 
+                                                      tcr_cols + 
+                                                      ['pmhc_id', 'tcr_id'])]
+        
+        self.pmhc_object = pmhc_class(pmhc_df=pmhc_df,
+                                      tcr_df=tcr_df,
+                                      id_df=id_df,
+                                      other_df=other_df,
+                                      ensemble_size=self.ensemble_size,
+                                      partition_size=partition_size)
+        
+        # Encode pmhc and tcrs 
+        for partition in self.pmhc_object(mode='encode_pmhc'):
+            _, p_embedding = self.encoder.encode(df=partition,
+                                                 is_embedding=False,
+                                                 verbose=False)
+            self.pmhc_object.send(p_embedding.to('cpu'), 
+                                  destination="list")
             
-            for partition in self.user_df_dict['complete'][split]:
-                # Zero out TCR Alpha chain
-                # Manipulate the dataframe
-                # not necessary but might be useful when debugging
-                df_alpha_missing = deepcopy(
-                    self.user_df_dict['complete'][split][partition])
-                df_alpha_missing['va'] = ""
-                df_alpha_missing['vaseq'] = ""
-                df_alpha_missing['cdr3a'] = ""
-                self.user_df_dict['alpha missing'][split][partition] = df_alpha_missing
-                # Manipulate tcr embedding
-                tcr_embedding_alpha_missing = self.user_tcr_embedding_dict['complete'][split][partition].detach().clone()
-                # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
-                tcr_embedding_alpha_missing[:, 0:35] = 0
-                self.user_tcr_embedding_dict['alpha missing'][split][partition] = tcr_embedding_alpha_missing
+        for partition in self.pmhc_object(mode='encode_tcr'):
+            t_embedding, _ = self.encoder.encode(df=partition,
+                                                 is_embedding=False,
+                                                 verbose=False)
+            self.pmhc_object.send(t_embedding.to('cpu'), 
+                                  destination="list")
 
-                # Zero out TCR Beta chain
-                # Manipulate the dataframe
-                # not necessary but might be useful when debugging
-                df_beta_missing = deepcopy(
-                    self.user_df_dict['complete'][split][partition])
-                df_beta_missing['vb'] = ""
-                df_beta_missing['vbseq'] = ""
-                df_beta_missing['cdr3b'] = ""
-                self.user_df_dict['beta missing'][split][partition] = df_beta_missing
-                # Manipulate tcr embedding
-                tcr_embedding_beta_missing = self.user_tcr_embedding_dict['complete'][split][partition].detach().clone()
-                # The embedding order is va (5) cdr3a (30) vb (5) cdr3b (30)
-                tcr_embedding_beta_missing[:, 35:70] = 0
-                self.user_tcr_embedding_dict['beta missing'][split][partition] = tcr_embedding_beta_missing
-
-    def _get_user_df_output(self) -> None:
-        """Predict using the dataframe
-
-        Use the classifier model to produce logits of records in the dataframe 
-
-        """
-        for missingness in self.user_df_dict:
-            if len(self.user_df_dict[missingness]) == 0:
-                continue
-            for split in self.user_df_dict[missingness]:
-                for partition in self.user_df_dict[missingness][split]:
-                    duplicated_pmhc_embedding = self.user_pmhc_embedding_dict[split].repeat(
-                                    self.user_df_dict[missingness][split][partition].shape[0], 1
-                                )
-                    df_output = self.classifier_model.predict(
-                        pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
-                        tcr_embedding=self.user_tcr_embedding_dict[missingness][split][partition].to(self.model_device))
-                    for model_id in range(self.ensemble_size):
-                        self.user_df_dict[missingness][split][partition]['logit_m_'+str(model_id)] = df_output[:,model_id]
-                    self.user_df_dict[missingness][split][partition]['logit'] = np.mean(df_output, axis=1)
-                
-                
+    def _get_pmhc_tcr_output(self,
+                             tcr_species: str,
+                             background_tcr_embedding: Optional[torch.tensor]=None) -> None:
+        self.pmhc_object.send(background_tcr_embedding,
+                              destination="single")
+        for pmhc_embedding, tcr_embedding in self.pmhc_object("predict_"+tcr_species):
+            logits_p = self.classifier_model.predict(
+                pmhc_embedding=pmhc_embedding.to(self.model_device),
+                tcr_embedding=tcr_embedding.to(self.model_device)
+            ) 
+            self.pmhc_object.send(logits_p, 
+                                  destination="list")
+    
+    def _compute_logit(self):
+        for tcr_species in ['human', 'mouse']:
+            self._get_pmhc_tcr_output(tcr_species=tcr_species,
+                                      background_tcr_embedding=None)
+    
     def _generate_background_dataloader(self,
-                                        load_embedding: bool,
-                                        replacement: bool,
                                         check_size: list,
                                         load_size: int,
                                         minibatch_size: int) -> Tuple[list, list, background_species_tcr_dataloader_class, background_species_tcr_dataloader_class]:
@@ -288,10 +253,6 @@ class pMTnet_Omni_class:
 
         Parameters 
         ----------
-        load_embedding: bool
-            Whether or not to load embeddings of the background tcrs 
-        replacement: bool
-            Whether or not to sample with replacement
         check_size: list 
             The numbers of background tcrs to be used to check against the user results 
         load_size: int 
@@ -315,38 +276,32 @@ class pMTnet_Omni_class:
                                                                    minibatch_size=minibatch_size)
         background_human_dataset = background_species_tcr_dataset_class(data_dir=self.background_data_dir,
                                                                         species="human",
-                                                                        load_embedding=load_embedding,
+                                                                        load_embedding=True,
                                                                         load_size=load_size)
         background_mouse_dataset = background_species_tcr_dataset_class(data_dir=self.background_data_dir,
                                                                         species="mouse",
-                                                                        load_embedding=load_embedding,
+                                                                        load_embedding=True,
                                                                         load_size=load_size)
         background_human_dataloader = background_species_tcr_dataloader_class(background_human_dataset,
                                                                               batch_size=batch_size,
-                                                                              replacement=replacement)
+                                                                              replacement=True)
         background_mouse_dataloader = background_species_tcr_dataloader_class(background_mouse_dataset,
                                                                               batch_size=batch_size,
-                                                                              replacement=replacement)
+                                                                              replacement=True)
         return batch_size, batch_finished_indicator, background_human_dataloader, background_mouse_dataloader
+
 
     def _compute_percentile_rank(self,
                                  rank_threshold: Union[float, list, np.ndarray]=0.03,
-                                 B: int = 1,
-                                 load_embedding: bool = True,
-                                 replacement: bool = True,
                                  check_size: list = [1000, 10000, 100000],
                                  load_size: int = 1000000,
-                                 minibatch_size: int = 50000,
-                                 log_file_path: Optional[str] = None,
-                                 model_id: int=0) -> None:
+                                 minibatch_size: int = 50000) -> None:
         """Compute the rank percentiles 
 
         Parameters
         ----------
         rank_threshold: float, list, np.ndarray
             The rank percentile threshold greater than which further verification is NOT conducted 
-        B: int 
-            Number of trials 
         load_embedding: bool
             Whether or not to load embeddings of the background tcrs 
         replacement: bool
@@ -357,147 +312,74 @@ class pMTnet_Omni_class:
             The number of background tcrs to be loaded by the dataloaders 
         minibatch_size: int
             The number of background tcrs to be sampled each time a dataloader is called
-        log_file_path: Optional[str]
-            The file path to save the output log file
-        model_id: int
-            The id of the model in the ensemble 
-
         """
-        if log_file_path is None:
-            log_file_path = os.devnull
-            print("Log file will NOT be saved as no path is specified.\n")
-        elif os.path.splitext(log_file_path)[1] != ".txt":
-            raise Exception("Only .txt file is used for the log file.\n")
-        else:
-            temp = os.path.splitext(log_file_path)
-            log_file_path = temp[0] + "_" + str(model_id) + temp[1]
         
-        with open(log_file_path, 'w') as f:
-            with redirect_stdout(f):
-                # Make sure check size is in an ascending order
-                print("Model "+str(model_id)+"... \n")
-                # We sort the check size in an ascending order
-                # and we make sure that the input is a list 
-                check_size = np.sort(list(check_size))
+        # Make sure check size is in an ascending order
+        # We sort the check size in an ascending order
+        # and we make sure that the input is a list 
+        check_size = np.sort(list(check_size))
+        
+        # We first make sure that the variable is an 1d np.array 
+        # Note that this also works if the variable is a float 
+        rank_threshold = np.array(rank_threshold).flatten()
+        # We sort the thresholds in a descending order 
+        rank_threshold = np.sort(rank_threshold)[::-1]
+        # If check size - 1 is longer than threshold
+        # we pad the minimum values 
+        rank_threshold = np.pad(rank_threshold, 
+                                pad_width=(0, np.max([0, len(check_size) - 1 - len(rank_threshold)])),
+                                mode='minimum')
+        # Finally, we pad a 0 at then end 
+        # This is just so that the length of the threholds 
+        # would be the same as the check size list 
+        rank_threshold = np.pad(rank_threshold, 
+                                pad_width=(0,1),
+                                mode='constant',
+                                constant_values=0.0)
+        
+        batch_size, batch_finished_indicator, background_human_dataloader, background_mouse_dataloader = self._generate_background_dataloader(check_size=check_size,
+                                                                                                                                             load_size=load_size,
+                                                                                                                                             minibatch_size=minibatch_size)
+        
+        # Compute background logits
+        # and update ranks for each tcr 
+        check_size_ind = 0
+        b_size_so_far = 0
+        for batch_size_ind, (human_background_tcr, mouse_background_tcr) in enumerate(zip(background_human_dataloader, background_mouse_dataloader)):
+            b_size = batch_size[batch_size_ind]
+            b_size_so_far += b_size
+            
+            human_background_tcr_embedding, _ = self.encoder.encode(
+                df=human_background_tcr, is_embedding=True)
+            
+            self._get_pmhc_tcr_output(tcr_species="human",
+                                      background_tcr_embedding=human_background_tcr_embedding)
+            
+            mouse_background_tcr_embedding, _ = self.encoder.encode(
+                df=mouse_background_tcr, is_embedding=True)
+            
+            self._get_pmhc_tcr_output(tcr_species="mouse",
+                                      background_tcr_embedding=mouse_background_tcr_embedding)
+            
+            if batch_finished_indicator[batch_size_ind]:
                 
-                # We first make sure that the variable is an 1d np.array 
-                # Note that this also works if the variable is a float 
-                rank_threshold = np.array(rank_threshold).flatten()
-                # We sort the thresholds in a descending order 
-                rank_threshold = np.sort(rank_threshold)[::-1]
-                # If check size - 1 is longer than threshold
-                # we pad the minimum values 
-                rank_threshold = np.pad(rank_threshold, 
-                                        pad_width=(0, np.max([0, len(check_size) - 1 - len(rank_threshold)])),
-                                        mode='minimum')
-                # Finally, we pad a 0 at then end 
-                # This is just so that the length of the threholds 
-                # would be the same as the check size list 
-                rank_threshold = np.pad(rank_threshold, 
-                                        pad_width=(0,1),
-                                        mode='constant',
-                                        constant_values=0.0)
-                    
-                for b in range(B):
-                    print("Starting trial "+str(b+1) +
-                          " out of "+str(B)+" total tries\n")
-                    print("Loading background TCR datasets\n")
-                    batch_size, batch_finished_indicator, background_human_dataloader, background_mouse_dataloader = self._generate_background_dataloader(load_embedding=load_embedding,
-                                                                                                                                                          replacement=replacement,
-                                                                                                                                                          check_size=check_size,
-                                                                                                                                                          load_size=load_size,
-                                                                                                                                                          minibatch_size=minibatch_size)
-                    for missingness in self.user_df_dict:
-                        if len(self.user_df_dict[missingness]) == 0:
-                            continue
-                        for split in tqdm(self.user_df_dict[missingness], position=1, leave=False):
-                            # Create columns for percentile ranks 
-                            for partition in self.user_df_dict[missingness][split]:
-                                self.user_df_dict[missingness][split][partition]["percentile_rank_m_" + str(model_id) +
-                                                                                 "_"+str(b)] = np.inf
-                                self.user_df_dict[missingness][split][partition]["rank_m_" + str(model_id) + "_"+str(b)] = 0
-                            # Depending on the species, we use their corresponding dataloader
-                            if self.user_df_dict[missingness][split][partition].at[0, "tcr_species"] == "human":
-                                data_loader = background_human_dataloader
-                            else:
-                                data_loader = background_mouse_dataloader
-                            # Compute background logits
-                            # and update ranks for each tcr 
-                            check_size_ind = 0
-                            b_size_so_far = 0
-                            for batch_size_ind, tcrs in enumerate(data_loader):
-                                b_size = batch_size[batch_size_ind]
-                                b_size_so_far += b_size
-                                print(
-                                    "Verifying using "+str(check_size[check_size_ind]) + " background tcrs\n")
-                                print("\tLoading minibatch of " +
-                                    str(tcrs.shape[0]) + " tcrs\n")
-                                #####################################
-                                print("\tEncoding background tcrs\n")
-                                background_tcr_embedding, _ = self.encoder.encode(
-                                    df=tcrs, is_embedding=load_embedding)
-                                # Since in each split, pmhc is identical ,
-                                # we will just repeat the first occurance 
-                                duplicated_pmhc_embedding = self.user_pmhc_embedding_dict[split].repeat(
-                                    b_size, 1
-                                )
-                                print("\tPredicting background tcrs\n")
-                                background_result = self.classifier_model.model_list[model_id].predict(
-                                    pmhc_embedding=duplicated_pmhc_embedding.to(self.model_device),
-                                    tcr_embedding=background_tcr_embedding)
-                                # For all the user given tcrs we will use the same set of 
-                                # background tcrs 
-                                for partition in self.user_df_dict[missingness][split]:
-                                    n_rows = self.user_df_dict[missingness][split][partition].shape[0]
-                                    for row in range(n_rows):
-                                        # Update ranking (not percentile ranking)
-                                        current_position = np.sum(background_result > self.user_df_dict[missingness][split][partition].at[row, 'logit_m_'+str(model_id)])
-                                        self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] += current_position
+                self.pmhc_object.compute_percentile_ranks(background_size=check_size[check_size_ind])
+                
+                # If all percentile rankings are greater than the current threshold 
+                # we stop the validation. 
+                # The last threshold should be 0 (padded)
+                if self.pmhc_object.safe_to_stop(rank_threshold=rank_threshold[check_size_ind]):
+                    break
+                
+                # Else, we reset the ranks and percentile ranks 
+                # And we update the indicies 
+                if check_size_ind < len(check_size)-1:
+                    # This means that we still have some more checks to do 
+                    self.pmhc_object.reset_exo_ranks()
+                    # update the indicies 
+                    b_size_so_far = 0
+                    check_size_ind += 1
                                 
-                                if batch_finished_indicator[batch_size_ind]:
-                                    # If the current batch is finished 
-                                    # We first extract the logits for all user given pairs 
-                                    user_temp = np.array([logit for partition in self.user_df_dict[missingness][split]
-                                                 for logit in self.user_df_dict[missingness][split][partition]['logit_m_'+str(model_id)].values])
-                                    
-                                    # When computing the final percentile ranks, we include 
-                                    # results from the background tcrs as well as 
-                                    # the user given pairs 
-                                    # This way, the percentile rankings would be consistent with the logits  
-                                    for partition in self.user_df_dict[missingness][split]:
-                                        n_rows = self.user_df_dict[missingness][split][partition].shape[0]
-                                        for row in range(n_rows):
-                                            # Update rankings 
-                                            current_position = np.sum(user_temp > self.user_df_dict[missingness][split][partition].at[row, 'logit_m_'+str(model_id)])
-                                            self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] += current_position
-                                            # Then, compute the final percentile ranking
-                                            rank_percentile = self.user_df_dict[missingness][split][partition].at[row, "rank_m_" + str(model_id) + "_"+str(b)] / (check_size[check_size_ind]+len(user_temp))
-                                            self.user_df_dict[missingness][split][partition].at[row, 'percentile_rank_m_'+
-                                                                                           str(model_id)+"_"+str(b)] = rank_percentile
-                                    
-                                    # Finally, we extract all percentile rankings 
-                                    user_temp = np.array([rank for partition in self.user_df_dict[missingness][split]
-                                                 for rank in self.user_df_dict[missingness][split][partition]['percentile_rank_m_'+
-                                                                                                                str(model_id)+"_"+str(b)].values])
-                                    
-                                    # If all percentile rankings are greater than the current threshold 
-                                    # we stop the validation. 
-                                    # The last threshold should be 0 (padded)
-                                    if np.all(user_temp > rank_threshold[check_size_ind]):
-                                        break
-                                    
-                                    # Else, we reset the ranks and percentile ranks 
-                                    # And we update the indicies 
-                                    if check_size_ind < len(check_size)-1:
-                                        # This means that we still have some more checks to do 
-                                        for partition in self.user_df_dict[missingness][split]:
-                                            self.user_df_dict[missingness][split][partition]["percentile_rank_m_" + str(model_id) +
-                                                                                            "_"+str(b)] = np.inf
-                                            self.user_df_dict[missingness][split][partition]["rank_m_" + str(model_id) + "_"+str(b)] = 0
-                                        # update the indicies 
-                                        b_size_so_far = 0
-                                        check_size_ind += 1
-                                    
                                     
     def _amalgamate(self) -> Tuple[dict, dict, dict]:
         """Amalgamate all the partitions 
@@ -536,101 +418,46 @@ class pMTnet_Omni_class:
 
         return df_dict, tcr_dict, pmhc_dict
 
-    
-    def read_user_df(self,
-                     user_data: Union[str, pd.DataFrame],
-                     partition_size: int=500,
-                     verbose: bool = True,
-                     **kwargs) -> None:
-        """Read in user dataframe
-
-        Parameters
-        ----------
-        user_data: str, pd.DataFrame
-            The path to the user dataframe or the actual dataframe
-        partition_size: int 
-            Size of each partition. Used to save GPU memory.
-        verbose: bool
-            Whether or not to print out model process 
-        **kwargs
-            Other key-value pairs for the pd.read_csv function
-        
-        """ 
-        self._read_user_df(user_data=user_data,
-                           partition_size=partition_size,
-                           **kwargs)
-        self._encode_user_df(verbose=verbose)
         
     def predict(self,
-                create_incomplete_data: bool = False,
                 compute_percentile_rank: bool = True,
                 output_file_path: Optional[str] = None,
                 rank_threshold: Union[float, list, np.ndarray] = 0.03,
-                B: int = 1,
-                load_embedding: bool = True,
-                replacement: bool = True,
                 check_size: list = [1000, 10000, 100000],
                 load_size: int = 1000000,
-                minibatch_size: int = 50000,
-                log_file_path: Optional[str] = None) -> None:
+                minibatch_size: int = 50000) -> None:
         """Predict TCR-pMHC affinity
 
         Parameters
         ----------
-        create_incomplete_data: bool
-            Whether or not to create alpha missing and beta missing data. True only when doing validation 
         compute_percentile_rank: bool
             Whether or not to compute percentile ranks. If False, then only logits will be computed 
         output_file_path: Optional[str]
             The path the output file. ONLY .csv file is supported 
         rank_threshold: Union[float, list, np.ndarray]
             The rank percentile threshold greater than which further verification is NOT conducted 
-        B: int 
-            Number of trials 
-        load_embedding: bool
-            Whether or not to load embeddings of the background tcrs 
-        replacement: bool
-            Whether or not to sample with replacement
         check_size: list 
             The numbers of background tcrs to be used to check against the user results 
         load_size: int 
             The number of background tcrs to be loaded by the dataloaders 
         minibatch_size: int
             The number of background tcrs to be sampled each time a dataloader is called
-        log_file_path: Optional[str]
-            The file path to save the output log file
 
         """
 
-        if create_incomplete_data:
-            self._create_incomplete_data()
         # Compute logit for each model in the ensemble 
         # This should also output the average logit over the ensemble
         print("Getting raw affinity scores...\n")
-        self._get_user_df_output()
+        self._compute_logit()
         print("Done.\n")
         if compute_percentile_rank:
             # For each model in the ensemble, we compute the percentile rank
             print("Computing percentile ranks for each model in the ensemble\n")
-            for model_id in tqdm(range(self.ensemble_size), position=0):
-                self._compute_percentile_rank(rank_threshold=rank_threshold,
-                                            B=B,
-                                            load_embedding=load_embedding,
-                                            replacement=replacement,
-                                            check_size=check_size,
-                                            load_size=load_size,
-                                            minibatch_size=minibatch_size,
-                                            log_file_path=log_file_path,
-                                            model_id=model_id)
-            # We average the percentile ranks 
-            for b in range(B):
-                for missingness in self.user_df_dict:
-                    if len(self.user_df_dict[missingness]) == 0:
-                        continue
-                    for split in self.user_df_dict[missingness]:
-                        for partition in self.user_df_dict[missingness][split]:
-                            col_names = ["percentile_rank_m_" + str(model_id) + "_"+str(b) for model_id in range(self.ensemble_size)]
-                            self.user_df_dict[missingness][split][partition]["percentile_rank_" +str(b)] = self.user_df_dict[missingness][split][partition][col_names].mean(axis=1)
+
+            self._compute_percentile_rank(rank_threshold=rank_threshold,
+                                        check_size=check_size,
+                                        load_size=load_size,
+                                        minibatch_size=minibatch_size)
             
         if output_file_path is not None:
             filename, _ = os.path.splitext(output_file_path)
