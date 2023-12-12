@@ -1,4 +1,4 @@
-Copyright (c) [insert appropriate year] The University of Texas Southwestern Medical Center.
+Copyright (c) 2023 The University of Texas Southwestern Medical Center.
 
 All rights reserved.
 
