@@ -12,7 +12,7 @@ from sklearn import metrics
 import torch
 
 # To entertain users
-from tqdm import tqdm
+from tqdm.auto import tqdm
 # For recording model output log
 from contextlib import redirect_stdout
 # For saving roc curves in a pdf file
