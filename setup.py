@@ -58,20 +58,21 @@ class PypiCommand(distutils.cmd.Command):
 setup(
     name="pMTnet_Omni",
     version=VERSION,
-    description="Your one-stop TCR-pMHC affinity prediction algorithm",
+    description="pan-MHC and cross-Species Prediction of T Cell Receptor-Antigen Binding",
     author="Yi Han, Yuqiu Yang, Tao Wang",
     author_email="yi.han@utsouthwestern.edu, yuqiuy@smu.edu, Tao.Wang@UTSouthwestern.edu",
     long_description_content_type="text/markdown",
     long_description=open("README.md").read(),
     packages=["pMTnet_Omni", "pMTnet_Omni.encoders", "pMTnet_Omni.models"],
-    python_requires=">=3.9",
+    python_requires=">=3.9,<3.11",
     install_requires=[
         'numpy==1.22.4',
         'pandas==1.5.2',
         'matplotlib==3.6.2',
         'scikit-learn==1.0.2',
         'tqdm==4.64.1',
-        'torch==1.13.1'
+        'torch==1.13.1',
+        'pMTnet_Omni_Document'
     ],
     test_requires=[
         'pytest==7.1.2',
