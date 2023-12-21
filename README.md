@@ -12,7 +12,7 @@
 
 Profiling the binding of T cell receptors (TCRs) of T cells to antigenic peptides presented by MHC proteins is one of the most important unsolved problems in modern immunology. We developed <b>pMTnet-omni</b>, an Artificial Intelligence (AI) system based on hybrid protein sequence and structure information, to predict the pairing of TCRs of &alpha;&beta; T cells with peptide-MHC complexes (pMHCs). <b>pMTnet-omni</b> is capable of handling peptides presented by both class I and II pMHCs, and capable of handling both human and mouse TCR-pMHC pairs, through information sharing enabled this hybrid design. 
 
-Please refer to our paper for more details: [pMTnet Omni paper link here](https://doi.org/10.1101/2023.12.01.569599)
+Please refer to [our paper](https://doi.org/10.1101/2023.12.01.569599) for more details.
 
 ## CITATION :book:
 We have uploaded our article to bioRxiv. To cite
@@ -29,6 +29,10 @@ We have uploaded our article to bioRxiv. To cite
 	journal = {bioRxiv}
 }
 ```
+
+## Model Overview 
+![Model Overview](/docs/source/images/overview.png)
+
 
 ## DBAI :computer:
 To try out pMTnet Omni, we recommend our online tool hosted on [DBAI](https://dbai.biohpc.swmed.edu/pmtnet/), where you can find all the members of the pMTnet 
@@ -51,7 +55,7 @@ As pMTnet Omni relies on pytorch=1.13.1, please make sure that your Python versi
 **_NOTE:_** We have tested the package on Python=3.9 and Python=3.10. If you want to use a lower version Python, proceed with caution. 
 
 ```shell 
-conda create -n pMTnet_Omni_env python=3.10
+conda create -n pMTnet_Omni python=3.10
 pip install -r requirements.txt 
 ```
 or
@@ -69,11 +73,6 @@ Prepare your dataset so that it looks somewhat like the following:
 
 We have also built a detailed [online documentation](https://pmtnet-omni-document.readthedocs.io/en/latest/) where we walk you through every single step for data preparation. It also includes a step-by-step instruction on input format. 
 
-**_NOTE:_** We DO NOT have an online document for this repo. However, we do have HTML files for the documentation ready to go.
-
-### Model Overview 
-![Model Overview](/docs/source/images/overview.png)
-
 ### Quick Start Guide 
 1. Use [this link](https://365utsouthwestern-my.sharepoint.com/:u:/r/personal/yuqiu_yang_utsouthwestern_edu/Documents/pMTnet_Omni_datafile/data.tgz?csf=1&web=1&e=YdNTsn) to download the supporting data to your local directory, say <i>./data</i>. 
 
@@ -82,17 +81,49 @@ We have also built a detailed [online documentation](https://pmtnet-omni-documen
 2. Prepare your dataset so that it looks somewhat like the following:
 ![Sample df](/docs/source/images/sample_df.png)
 
-3. Use our supporting package [pMTnet_Omni_Document](https://github.com/Yuqiu-Yang/pMTnet_Omni_Document) to curate your data. 
+3. Use our supporting package [pMTnet_Omni_Document](https://github.com/Yuqiu-Yang/pMTnet_Omni_Document) which should have been installed to the virtual environment to curate your data. 
+Say your dataset is 
+at `./df.csv`. After activating the virtual environment, you can proceed in two ways: 
 
-4. Say your curated dataset is at `./df.csv` and the extra MHC dictionary is saved at `./extra_mhc_dict.json`. For interactive Python, you can run 
+For interactive Python, you can try the following: 
+```shell
+from pMTnet_Omni_Document.data_curation import read_file 
+
+# Read the file 
+df, mhc_seq_dict = read_file(file_path="./df.csv",
+							save_results=True,
+							sep=",")
+
+```
+For CLI, execute 
+```shell
+python -m pMTnet_Omni_Document --file_path ./df.csv --output_folder_path ./
+```
+
+In the output, you will see two files:
+
+``./df_curated.csv`` will contain all the curated data. You will 
+also see some extra columns in this file. 
+
+.. note:: 
+    
+    If you see that ``mhca_use_seq`` and/or ``mhcb_user_seq`` columns 
+    all have ``False``, then the json file will simply contain an empty 
+    dictionary. 
+
+``./mhc_seq_dict.json`` is a *json* file of a dictionary.
+The keys are various MHC sequences and the values are their corresponding 
+ESM embeddings.
+
+4. Say your curated dataset is at `./df_curated.csv` and the extra MHC dictionary is saved at `./extra_mhc_dict.json`. For interactive Python, you can run 
 ```shell
 # Load packages 
 import pandas as pd 
 from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
 # Read dataframe and initialize pmtnet-omni
-df=pd.read_csv("./df.csv")
-pmtnet = pMTnet_Omni_class()
+df=pd.read_csv("./df_curated.csv")
+pmtnet = pMTnet_Omni_class(extra_mhc_dict = "./extra_mhc_dict.json")
 pmtnet.read_user_df(df)
 
 # Binding affinity prediction 
@@ -103,7 +134,7 @@ pmtnet.predict(output_file_path = "./pmtnet_results.csv",
 ```
 For CLI, in your terminal, run 
 ```shell
-python -m pMTnet_Omni --data_dir ./data --user_data_path ./df.csv --extra_mhc_dict_path ./extra_mhc_dict.json --output_file_path ./df_results.csv
+python -m pMTnet_Omni --data_dir ./data --user_data ./df_curated.csv --extra_mhc_dict_path ./extra_mhc_dict.json --output_file_path ./df_results.csv
 ```
 
 5. An example output would look like this:

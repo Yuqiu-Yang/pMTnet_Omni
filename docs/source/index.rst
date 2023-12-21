@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: ../../assets/logo.png
+.. image:: ../../assets/pmtnet_logo.png
    :width: 600
    :align: center
 
@@ -13,10 +13,13 @@
 .. warning:: 
    This document is only for internal reference. 
 
-**pMTnet Omni** is a deep learning algorithm for affinity prediction based on 
-TCR Va, Vb, CDR3a, CDR3b sequences, peptide sequence, and MHC allele types.
-The predictions can be made for human and mouse alleles, 
-and for both CD8 T cells/MHC class I and CD4 T cells/MHC class II.
+Profiling the binding of T cell receptors (TCRs) of T cells to antigenic peptides
+presented by MHC proteins is one of the most important unsolved problems in modern immunology. 
+We developed **pMTnet-omni**, an Artificial Intelligence (AI) system based on hybrid protein 
+sequence and structure information, to predict the pairing of TCRs of :math:`{\alpha}` :math:`{\beta}` T cells with 
+peptide-MHC complexes (pMHCs). **pMTnet-omni** is capable of handling peptides presented by both 
+class I and II pMHCs, and capable of handling both human and mouse TCR-pMHC pairs, through information sharing
+enabled this hybrid design. 
 
 Here is a quick overview of the structure of the model:
 
@@ -40,8 +43,6 @@ For a more detailed exploration of our model, please refer to `our paper <https:
       journal = {bioRxiv}
    }
 
-Our GitHub repo can be found `here <https://github.com/Yuqiu-Yang/pMTnet_Omni>`_
-
 The online tool is hosted on `DBAI <https://dbai.biohpc.swmed.edu/pmtnet/>`_
 
 Please follow `this link <https://365utsouthwestern-my.sharepoint.com/:u:/r/personal/yuqiu_yang_utsouthwestern_edu/Documents/pMTnet_Omni_datafile/data.tgz?csf=1&web=1&e=YdNTsn>`_ 
@@ -57,22 +58,7 @@ Dependencies
 * scikit-learn==1.0.2
 * tqdm==4.64.1
 * torch==1.13.1
-
-Quick (but sloppy) Installation
---------------------------------
-
-.. warning:: 
-   We will NOT publish this package on PyPI. Therefore, this won't 
-   work. We left it here mainly for demonstration purposes. 
-
-.. note:: 
-   This will install *pMTnet_Omni* to your `base` environment. 
-   For a more in-depth instruction, check out our :doc:`installation_guide`. 
-
-.. code:: bash
-   
-   pip install pMTnet_Omni
-
+* pMTnet_Omni_Document
 
 User Guide / Tutorial
 =====================

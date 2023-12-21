@@ -10,7 +10,7 @@ provide an in-depth exploration of how the package works.
     TCRs as well as other supporting data is `./data`. 
 
     We will assume that the path to extra MHC dictionary is 
-    `./extra_mhc_dict.pickle`. 
+    `./extra_mhc_dict.json`. 
 
     And the user has already imported the class using the command:
 
@@ -19,7 +19,7 @@ provide an in-depth exploration of how the package works.
         from pMTnet_Omni.pMTnet_Omni_class import pMTnet_Omni_class
 
 .. note:: 
-    The extra_mhc_dict.pickle should be a pickle file of a dictionary
+    The extra_mhc_dict.json should be a pickle file of a dictionary
     whose keys are various MHC sequences and the values are their 
     corresponding ESM2 embeddings. 
     
@@ -39,7 +39,7 @@ It's relatively straightforward to instantiate a **pMTnet_Omni_class** object.
     # pMTnet_Omni will try cuda:0 if it's available 
     # Otherwise, it will use cpu
     pmtnet = pMTnet_Omni_class(data_dir="./data",
-                               extra_mhc_dict='./extra_mhc_dict.pickle')
+                               extra_mhc_dict='./extra_mhc_dict.json')
 * Specify the device via a string
   
   .. code-block:: python
@@ -47,12 +47,12 @@ It's relatively straightforward to instantiate a **pMTnet_Omni_class** object.
     # CPU:
     pmtnet = pMTnet_Omni_class(model_device="cpu",
                                data_dir="./data",
-                               extra_mhc_dict='./extra_mhc_dict.pickle')
+                               extra_mhc_dict='./extra_mhc_dict.json')
 
     # GUP: 
     pmtnet = pMTnet_Omni_class(model_device="cuda:0",
                                data_dir="./data",
-                               extra_mhc_dict='./extra_mhc_dict.pickle')
+                               extra_mhc_dict='./extra_mhc_dict.json')
 * Use the ``torch.device`` function 
   
   .. code-block:: python 
@@ -62,7 +62,7 @@ It's relatively straightforward to instantiate a **pMTnet_Omni_class** object.
             'cuda:0' if torch.cuda.is_available() else 'cpu')
     pmtnet = pMTnet_Omni_class(model_device=model_device,
                                data_dir="./data",
-                               extra_mhc_dict='./extra_mhc_dict.pickle')
+                               extra_mhc_dict='./extra_mhc_dict.json')
 * Seed 
   
   .. code-block:: python 
@@ -70,7 +70,7 @@ It's relatively straightforward to instantiate a **pMTnet_Omni_class** object.
     #To set seed to ensure reproducible results
     pmtnet = pMTnet_Omni_class(data_dir="./data",
                                seed=42,
-                               extra_mhc_dict='./extra_mhc_dict.pickle')
+                               extra_mhc_dict='./extra_mhc_dict.json')
 
 The entire process will take several seconds as **pMTnet_Omni_class** will 
 load the models and build necessary dictionaries for future usage. 

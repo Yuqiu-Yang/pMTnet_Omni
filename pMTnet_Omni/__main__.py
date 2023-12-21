@@ -49,10 +49,10 @@ parser.add_argument("--data_dir", default="./data",
 parser.add_argument("--seed", type=int, nargs="?", default=None,
                     help="Seed for reproducibility")
 parser.add_argument("--extra_mhc_dict_path", nargs="?", default=None, 
-                    help="The path to the .pickle file containing extra MHC embeddings")
+                    help="The path to the .json file containing extra MHC embeddings")
 
 # User input
-parser.add_argument("--user_data", help="The path the user data file")
+parser.add_argument("--user_data", help="The path to the user data file")
 parser.add_argument("--partition_size", type=int,
                     default=500, help="Size for each partition")
 
