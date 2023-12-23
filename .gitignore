@@ -164,7 +164,7 @@ tests/test_data/*
 !tests/test_data/extra_mhc_dict.json
 
 #
-pMTnet_Omni/models/*
+#pMTnet_Omni/models/*
 
 !pMTnet_Omni/models/__init__.py
 
