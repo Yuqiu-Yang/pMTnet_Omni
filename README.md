@@ -107,7 +107,7 @@ also see some extra columns in this file.
 
 .. note:: 
     
-    If you see that ``mhca_use_seq`` and/or ``mhcb_user_seq`` columns 
+    If you see that ``mhca_use_seq`` and/or ``mhcb_use_seq`` columns 
     all have ``False``, then the json file will simply contain an empty 
     dictionary. 
 
@@ -134,7 +134,7 @@ pmtnet.predict(output_file_path = "./pmtnet_results.csv",
 ```
 For CLI, in your terminal, run 
 ```shell
-python -m pMTnet_Omni --data_dir ./data --user_data ./df_curated.csv --extra_mhc_dict_path ./extra_mhc_dict.json --output_file_path ./df_results.csv
+python -m pMTnet_Omni --data_dir ./data --user_data ./df_curated.csv --extra_mhc_dict_path ./extra_mhc_dict.json --compute_percentile_rank --output_file_path ./df_results.csv
 ```
 
 5. An example output would look like this:
