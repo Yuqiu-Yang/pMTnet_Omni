@@ -3,317 +3,13 @@ import os
 import pandas as pd
 import numpy as np
 
-from pMTnet_Omni.utilities import plot_validation_curve, \
-                                    batchify_check_size, \
+from pMTnet_Omni.utilities import   batchify_check_size, \
                                     partition_dataframe, \
-                                    split_dataframe, \
+                                    amalgamate_partitions, \
                                     setup_seed, \
                                     path_to_dict, \
                                     dict_to_dir, \
                                     check_data_dir_structure
-
-###########################
-# plot_validation_curve
-
-@pytest.mark.parametrize("result_dicts, plot_type, primary_type, secondary_types, title, figure_save_path", [
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "roc", "complete", "overall", None, "./tests/test_data/test_plot.png"),
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "prc", "overall", None, "Trial title", None),
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "roc", "complete", None, None, "./tests/test_data/test_plot.png")
-])
-def test_plot_validation_curve(result_dicts, plot_type, primary_type, secondary_types, title, figure_save_path):
-    try:
-        plot_validation_curve(result_dicts=result_dicts,
-                              plot_type=plot_type,
-                              primary_type=primary_type,
-                              secondary_types=secondary_types,
-                              title=title,
-                              figure_save_path=figure_save_path)
-        try:
-            os.remove("./tests/test_data/test_plot.png")
-        except:
-            pass
-        assert True
-    except:
-        assert False
-
-###################
-# plot_validation_curve_errors
-
-
-@pytest.mark.parametrize("result_dicts, plot_type, primary_type, secondary_types, title, figure_save_path", [
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "precision-recall curve", "complete", "overall", None, None),
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "prc", "alpha missing", None, None, None),
-    ({"complete": {"overall": {"fpr": np.array([0.2, 0.5]),
-                               "tpr": np.array([0.5, 0.7]),
-                               "precision": np.array([0.8, 0.4]),
-                               "recall": np.array([0.3, 0.7]),
-                               "auroc": 0.5,
-                               "auprc": 0.7},
-                   "human overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse overall": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "human class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7},
-                   "mouse class i": {"fpr": np.array([0.2, 0.5]),
-                                     "tpr": np.array([0.5, 0.7]),
-                                     "precision": np.array([0.8, 0.4]),
-                                     "recall": np.array([0.3, 0.7]),
-                                     "auroc": 0.5,
-                                     "auprc": 0.7},
-                   "mouse class ii": {"fpr": np.array([0.2, 0.5]),
-                                      "tpr": np.array([0.5, 0.7]),
-                                      "precision": np.array([0.8, 0.4]),
-                                      "recall": np.array([0.3, 0.7]),
-                                      "auroc": 0.5,
-                                      "auprc": 0.7}},
-      "alpha missing": None,
-      "beta missing": None}, "roc", "both missing", None, None, None)
-])
-def test_plot_validation_curve_errors(result_dicts, plot_type, primary_type, secondary_types, title, figure_save_path):
-    try:
-        plot_validation_curve(result_dicts=result_dicts,
-                              plot_type=plot_type,
-                              primary_type=primary_type,
-                              secondary_types=secondary_types,
-                              title=title,
-                              figure_save_path=figure_save_path)
-        assert False
-    except:
-        assert True
 
 
 ##########################
@@ -321,7 +17,7 @@ def test_plot_validation_curve_errors(result_dicts, plot_type, primary_type, sec
 
 
 @pytest.mark.parametrize("check_size, minibatch_size, expected", [
-    ([10, 50], 30, ([10, 30, 30], [True, False, True]))
+    ([10, 50], 30, ([10, 30, 20], [True, False, True]))
 ])
 def test_batchify_check_size(check_size, minibatch_size, expected):
     batch_size, batch_finished_indicator = batchify_check_size(check_size=check_size,
@@ -342,22 +38,18 @@ def test_partition_dataframe(df, partition_size, expected):
         partitions[1].shape[0] == expected[1])
 
 #########################
-# split_dataframe 
+# amalgamate_partitions
 
-@pytest.mark.parametrize("df, by_columns, expected", [
-    (pd.DataFrame({"a": [1,1,2,3], "b": [4,5,6,7]}), ["a"], [2,1,1])
+@pytest.mark.parametrize("partition_dict, expected",[
+    ({0: pd.DataFrame({'a': [1, 2, 3], 'b':[4, 5, 6]}),
+      1: pd.DataFrame({'a': [1, 2, 3], 'b':[4, 5, 6]})}, [6,2])
 ])
-def test_split_dataframe(df, by_columns, expected):
-    splits, _ = split_dataframe(df=df, by_columns=by_columns)
-    size_list = []
-    for i in splits:
-        size_list.append(splits[i].shape[0])
-    assert size_list == expected
-
+def test_amalgamate_partitions(partition_dict, expected):
+    df = amalgamate_partitions(partition_dict=partition_dict)
+    assert (df.shape[0] == expected[0]) and (df.shape[1] == expected[1])
 
 ########################
 # setup_seed
-
 
 @pytest.mark.parametrize("seed", [
     (42)
@@ -403,8 +95,8 @@ def test_dict_to_dir(path):
     ("./tests/test_data")
 ])
 def test_check_data_dir_structure(path):
-    encoder_path, classifier_path = check_data_dir_structure(path=path)
-    assert all([x is None for x in encoder_path]) and all([x is None for x in classifier_path])
+    encoder_path, classifier_path, model_info_path = check_data_dir_structure(path=path)
+    assert all([x is None for x in encoder_path]) and all([x is None for x in classifier_path]) and (model_info_path == "")
 
 
 @pytest.mark.parametrize("path", [
@@ -413,7 +105,7 @@ def test_check_data_dir_structure(path):
 ])
 def test_check_data_dir_structure_error(path):
     try:
-        encoder_path, classifier_path = check_data_dir_structure(path=path)
+        encoder_path, classifier_path, model_info_path = check_data_dir_structure(path=path)
         assert False
     except:
         assert True

@@ -2,7 +2,6 @@
 import os
 import warnings
 import pandas as pd
-from copy import deepcopy
 
 # Numeric manipulation
 import numpy as np
@@ -12,181 +11,11 @@ import random
 # PyTorch
 import torch
 
-# ROC curve
-# from sklearn import metrics
-import matplotlib as mpl
-from matplotlib import pyplot as plt
-
 # Typing
 from typing import Tuple, Union, Optional
 
 
-def plot_validation_curve(result_dicts: dict,
-                          plot_type: str,
-                          primary_type: str,
-                          secondary_types: Optional[Union[str, list]] = None,
-                          title: Optional[str] = None,
-                          style_sheet: str='seaborn-v0_8-white',
-                          figsize: tuple=(20, 20),
-                          title_fontsize: float=60,
-                          linewidth: float=10,
-                          xlabel_fontsize: float=55,
-                          ylabel_fontsize: float=55,
-                          xticks_fontsize: float=45,
-                          yticks_fontsize: float=45,
-                          xlim: list=[0,1],
-                          ylim: list=[0,1],
-                          axis: str="on",
-                          legend_position: str="best",
-                          legend_fontsize: float=55,
-                          handlelength: float=2,
-                          legend_title_fontsize: float=55,
-                          bbox_to_anchor = (1,1),
-                          visible_spines: bool=False,
-                          figure_save_path: Optional[str] = None) -> None:
-    """Plot ROC and/or PRC
-
-    This function is used to plot ROC curves and PR (precision-recall) curves 
-    based on the validate method of the pMTnet_Omni_class 
-    
-    The function will first seek out all data (x, y, auc) satisfying primary_type
-    then plot multiple curves based on secondary_types
-
-    Parameters
-    ----------
-    result_dicts : dict
-        This should be the output of the validate method. 
-        It should be a nested dictionary
-        
-        {"complete": {"overall": {"fpr": np.ndarray,
-        
-                                  "tpr": np.ndarray,
-                                  
-                                  "precision": np.ndarray,
-                                  
-                                  "recall": np.ndarray,
-                                  
-                                  "auroc": float,
-                                  
-                                  "auprc": float},
-                                  
-                      "human overall": {},
-                      
-                      ...}, 
-                      
-         "alpha missing": {},
-         
-         "beta missing": {}}
-    plot_type : str
-        Either roc or prc 
-    primary_type : str
-        It can either be one of the 3 missing patterns or one of the 7 mhc classes 
-    secondary_types : Optional[Union[str, list]], optional
-        It can either be one of the 3 missing patterns or one of the 7 mhc classes 
-    title : Optional[str], optional
-        The plot title. If missing, the primary type will be used 
-    figure_save_path : str, optional
-        The path where the figure where be saved 
-
-    """
-    # The nams used in the code are not suitable for plotting
-    # Therefore, when creating the title, we will use their mappings
-    type_map = {"complete": "Both",
-                "alpha missing": "Beta",
-                "beta missing": "Alpha",
-                "overall": "All",
-                "human overall": "Human",
-                "mouse overall": "Mouse",
-                "human class i": "Human C1",
-                "human class ii": "Human C2",
-                "mouse class i": "Mouse C1",
-                "mouse class ii": "Mouse C2",
-                "class i": "Class I",
-                "class ii": "Class II"}
-
-    if plot_type == "roc":
-        x_key = "fpr"
-        x_label = '1 - Specificity'
-        y_key = "tpr"
-        y_label = 'Sensitivity'
-        auc_key = "auroc"
-    elif plot_type == "prc":
-        x_key = "recall"
-        x_label = "Recall"
-        y_key = "precision"
-        y_label = "Precision"
-        auc_key = "auprc"
-    else:
-        raise Exception("Only roc or prc are acceptable.\n")
-
-    if isinstance(secondary_types, str):
-        secondary_types = [secondary_types]
-    
-    if primary_type in ["complete", "alpha missing", "beta missing"]:
-        if result_dicts[primary_type] is None:
-            raise Exception(primary_type + " has not been computed.\n")
-        if secondary_types is None:
-            secondary_types = list(result_dicts[primary_type].keys())
-
-        plot_dict = {s_type: {"x": result_dicts[primary_type][s_type][x_key],
-                              "y": result_dicts[primary_type][s_type][y_key],
-                              "auc": result_dicts[primary_type][s_type][auc_key]} for s_type in secondary_types}
-
-    elif primary_type in ["overall", "human overall", "mouse overall",
-                          "human class i", "human class ii",
-                          "mouse class i", "mouse class ii",
-                          "class i", "class ii"]:
-        if secondary_types is None:
-            secondary_types = ["complete", "alpha missing", "beta missing"]
-
-        plot_dict = {s_type: {"x": result_dicts[s_type][primary_type][x_key],
-                              "y": result_dicts[s_type][primary_type][y_key],
-                              "auc": result_dicts[s_type][primary_type][auc_key]} for s_type in secondary_types if result_dicts[s_type] is not None}
-
-    else:
-        raise Exception("Unknown type\n")
-
-    if title is None:
-        title = type_map[primary_type]
-
-    colors = mpl.colormaps["inferno"].resampled(len(secondary_types) + 1)
-
-    plt.style.use(style_sheet)
-    fig = plt.figure(figsize=figsize)
-    fig.suptitle(title, fontsize=title_fontsize)
-
-    counter = 0
-    for s_type in plot_dict:
-        plt.plot(plot_dict[s_type]["x"],
-                 plot_dict[s_type]["y"],
-                 linewidth=linewidth, color=colors.colors[counter],
-                 label=type_map[s_type]+": "+str(plot_dict[s_type]["auc"]))
-        counter += 1
-
-    plt.xlabel(x_label, fontsize=xlabel_fontsize)
-    plt.ylabel(y_label, fontsize=ylabel_fontsize)
-
-    plt.xticks(fontsize=xticks_fontsize)
-    plt.yticks(fontsize=yticks_fontsize)
-
-    plt.xlim(xlim)
-    plt.ylim(ylim)
-    plt.axis(axis)
-    for pos in ['right', 'top', 'bottom', 'left']:
-        plt.gca().spines[pos].set_visible(visible_spines)
-    
-    plt.legend(loc=legend_position,
-               bbox_to_anchor=bbox_to_anchor,
-               fontsize=legend_fontsize, 
-               handlelength=handlelength,
-               title="AUC", title_fontsize=legend_title_fontsize)
-    plt.tight_layout()
-    
-    if figure_save_path is not None:
-        plt.savefig(figure_save_path)
-
-
-def batchify_check_size(check_size: list = [10, 20],
+def batchify_check_size(check_size: Union[int, list] = [10, 20],
                         minibatch_size: int = 10) -> Tuple[list, list]:
     """Batchify check size list
 
@@ -206,6 +35,8 @@ def batchify_check_size(check_size: list = [10, 20],
     """
     batch_size = []
     batch_finished_indicator = []
+    if isinstance(check_size, int):
+        check_size = [check_size]
     for size in check_size:
         if size <= minibatch_size:
             # if the size is less than the size of the dataset
@@ -215,15 +46,17 @@ def batchify_check_size(check_size: list = [10, 20],
         else:
             # Otherwise, we batchify
             n_batch = math.ceil(size/minibatch_size)
+            size_left = size
             i = 1
             while i < n_batch:
                 batch_size.append(minibatch_size)
+                size_left -= minibatch_size
                 # Add False to the indicator to let
                 # the program know that we are not finished
                 # checking for this size yet
                 batch_finished_indicator.append(False)
                 i += 1
-            batch_size.append(minibatch_size)
+            batch_size.append(size_left)
             batch_finished_indicator.append(True)
     return batch_size, batch_finished_indicator
 
@@ -249,47 +82,27 @@ def partition_dataframe(df: pd.DataFrame,
     n_partitions = math.ceil(df.shape[0]/partition_size)
     column_names = df.columns
     for i in range(n_partitions):
-        partitions[i] = df[i *
-                           partition_size: (i+1)*partition_size].reset_index(drop=True)
+        partitions[i] = df[i*partition_size: (i+1)*partition_size].reset_index(drop=True)
         partitions[i].columns = column_names
     return partitions
 
 
-def split_dataframe(df: pd.DataFrame,
-                    by_columns: list,
-                    partition_size: int=500) -> Tuple[dict, dict]:
-    """Split a dataframe by columns 
+def amalgamate_partitions(partition_dict: dict) -> pd.DataFrame:
+    """Amalgamate partitions back to one data frame 
 
     Parameters
     ----------
-    df : pd.DataFrame
-        The dataframe to be splitted 
-    by_columns : list
-        Columns to be used for splitting 
-    partition_size: int 
-        The chunk size
+    partition_dict : dict
+        A dictionary of data frames 
+
     Returns
     -------
-    dict
-        A dictionary of section of the original dataframe. 
-        The key would be unique values from the dataframe. 
+    pd.DataFrame
+        A dataframe 
     """
-    splits = {}
-    subdf = df[by_columns].groupby(by_columns,
-                                   sort=False, axis=0, dropna=False).size().reset_index()
-
-    subdf.drop(columns=[0], axis=1, inplace=True)
-    
-    ref_dict = {"partitions": partition_dataframe(df=subdf,
-                                                  partition_size=partition_size)}
-    for i in range(subdf.shape[0]):
-        key = tuple(subdf.iloc[i,:])
-        value = deepcopy(df)
-        for n, col in enumerate(by_columns):
-            value = value[value[col] == key[n]].reset_index(drop=True)
-        splits[key] = value   
-        ref_dict[key] = None
-    return splits, ref_dict
+    temp = [partition_dict[partition] for partition in partition_dict]
+    df = pd.concat(temp, axis=0, join='inner', ignore_index=True)
+    return df
 
 
 def setup_seed(seed: int) -> None:
@@ -381,7 +194,7 @@ def path_to_dict(path: str,
     return d
 
 
-def check_data_dir_structure(path: str) -> Tuple[list, list]:
+def check_data_dir_structure(path: str) -> Tuple[list, list, str]:
     """Check if the given directory satisfies the requirements for a data directory
 
     Parameters
@@ -391,8 +204,8 @@ def check_data_dir_structure(path: str) -> Tuple[list, list]:
 
     Returns
     ---------
-    Tuple[list, list]
-        File paths for encoders and the classifier model
+    Tuple[list, list, str]
+        File paths for encoders and the classifier model and the model information 
 
 
     """
@@ -406,6 +219,7 @@ def check_data_dir_structure(path: str) -> Tuple[list, list]:
                                                                                      "mouse_alpha_embedding.txt",
                                                                                      "mouse_beta.txt",
                                                                                      "mouse_beta_embedding.txt"])},
+                                       "background_pmhcs": {'dirs': {}, 'files': set(['pmhc_embedding.csv'])},
                                        "data_for_encoders": {'dirs': {"mhc_dict": {'dirs': {}, 'files': set([".PT files here"])},
                                                                       "name_dict": {'dirs': {}, 'files': set([".PT files here"])}},
                                                              'files': set(['Atchley_factors.csv', 'valid_mhc.txt'])},
@@ -453,13 +267,16 @@ def check_data_dir_structure(path: str) -> Tuple[list, list]:
             encoder_path.append(os.path.join(path, "encoder_model_weights", m))
     
     classifier_path = []
+    model_info_path = ""
     for m in user_data_dir_dict['dirs']['classifier_model_weights']['files']:
         if m.startswith("classifier") and m.endswith(".pth"):
             c_path = os.path.join(path, "classifier_model_weights", m)
             classifier_path.append(c_path)
+        if m.startswith("model_info"):
+            model_info_path = os.path.join(path, "classifier_model_weights", m)
     if len(classifier_path) == 0:
         warnings.warn("classifier.pth" +
                       " can not be found. Will use random weights.\n")
         classifier_path.append(None)
                 
-    return encoder_path, classifier_path
+    return encoder_path, classifier_path, model_info_path

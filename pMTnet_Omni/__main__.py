@@ -50,27 +50,21 @@ parser.add_argument("--seed", type=int, nargs="?", default=None,
                     help="Seed for reproducibility")
 parser.add_argument("--extra_mhc_dict_path", nargs="?", default=None, 
                     help="The path to the .json file containing extra MHC embeddings")
+parser.add_argument("--partition_size", type=int,
+                    default=500, help="Size for each partition")
 
 # User input
 parser.add_argument("--user_data", help="The path to the user data file")
-parser.add_argument("--partition_size", type=int,
-                    default=500, help="Size for each partition")
 
 # Prediction
 parser.add_argument("--compute_percentile_rank", action="store_true",
                     help="Whether or not to compute percentile ranks")
-parser.add_argument("--rank_threshold", nargs='+', type=float, default=[0.03],
-                    help="The rank percentile threshold greater than which further varification is NOT conducted")
-parser.add_argument("--not_load_embedding", action="store_true",
-                    help="NOT load embeddings of the background tcrs. THIS WILL BE SLOOOOOW")
-parser.add_argument("--check_size", nargs='+', type=int, default=[
-                    1000, 10000, 100000], help="The numbers of background tcrs to be used to check against the user results")
+parser.add_argument("--check_size", type=int, default=1000000, 
+                    help="The numbers of background tcrs/pmhcs to be used to check against the user results")
 parser.add_argument("--load_size", type=int, default=1000000,
                     help="The number of background tcrs to be loaded by the dataloaders")
 parser.add_argument("--minibatch_size", type=int, default=50000,
-                    help="The number of background tcrs to be sampled each time a dataloader is called")
-parser.add_argument("--log_file_path",
-                    help="The file path to save the output log file")
+                    help="The number of background tcrs/pmhcs to be sampled each time a dataloader is called")
 
 # User output
 parser.add_argument("--output_file_path",
@@ -119,29 +113,22 @@ def main(cmdargs: argparse.Namespace):
     pmtnet = pMTnet_Omni_class(model_device=model_device,
                                data_dir=cmdargs.data_dir,
                                seed=cmdargs.seed,
-                               extra_mhc_dict=cmdargs.extra_mhc_dict_path)
+                               extra_mhc_dict=cmdargs.extra_mhc_dict_path,
+                               partition_size=cmdargs.partition_size)
 
     # Read user data file
     pmtnet.read_user_df(user_data=user_data,
-                        partition_size=cmdargs.partition_size,
-                        verbose=True,
                         sep=sep,
                         header=0)
 
     # Prediction using rank against background
-    load_embedding = not cmdargs.not_load_embedding
     compute_percentile_rank = cmdargs.compute_percentile_rank
     
-    pmtnet.predict(create_incomplete_data=False,
-                   compute_percentile_rank=compute_percentile_rank,
+    pmtnet.predict(compute_percentile_rank=compute_percentile_rank,
                    output_file_path=cmdargs.output_file_path,
-                   rank_threshold=cmdargs.rank_threshold,
-                   load_embedding=load_embedding,
-                   replacement=True,
-                   check_size=list(cmdargs.check_size),
+                   check_size=cmdargs.check_size,
                    load_size=cmdargs.load_size,
-                   minibatch_size=cmdargs.minibatch_size,
-                   log_file_path=cmdargs.log_file_path)
+                   minibatch_size=cmdargs.minibatch_size)
 
     sys.exit(0)
 

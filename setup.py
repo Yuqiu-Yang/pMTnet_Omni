@@ -68,8 +68,6 @@ setup(
     install_requires=[
         'numpy==1.22.4',
         'pandas==1.5.2',
-        'matplotlib==3.6.2',
-        'scikit-learn==1.0.2',
         'tqdm==4.64.1',
         'torch==1.13.1',
         'pMTnet_Omni_Document'
