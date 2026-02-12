@@ -137,6 +137,8 @@ For CLI, in your terminal, run
 python -m pMTnet_Omni --data_dir ./data --user_data ./df_curated.csv --extra_mhc_dict_path ./extra_mhc_dict.json --compute_percentile_rank --output_file_path ./df_results.csv
 ```
 
+In general, pMTnet_Omni generates prediction for one TCR-pMHC within a couple of seconds on H100.
+
 5. An example output would look like this:
 ![Sample output](/docs/source/images/sample_output.png)
  
