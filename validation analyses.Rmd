@@ -1,0 +1,214 @@
+---
+title: "R workflow to plot the results"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+# 1. Unseen TCR-pMHC pairs
+
+## Read validation data results
+
+```{r}
+rm(list=ls())
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+```
+
+## Print AUROC of unseen TCR-pMHC pairs
+
+```{r}
+print(PRROC::roc.curve((1-result$avg_rank[result$label==1]),(1-result$avg_rank[result$label==0])))
+```
+
+# 2. Read unseen TCR, similar TCR, training peptide, and training MHC lists which can be download from Zenodo <https://doi.org/10.5281/zenodo.18233675>
+
+```{r}
+#unseen TCR list
+val_tcr_remain_list<-read.table("val_tcr_remain_list.csv",header = F,sep = ",")
+val_tcr_remain_list<-val_tcr_remain_list$V1
+
+#similar TCR list
+val_cdr3_similar_list<-read.table("val_cdr3_similar_0.8_jaccard_inner_join_list.csv",header = F,sep = ",")
+val_cdr3_similar_list<-val_cdr3_similar_list$V1
+
+uniq_train_pep<-read.table("train_uniq_peptide_list.csv",header = F,sep = ",")
+uniq_train_pep<-uniq_train_pep$V1
+
+uniq_train_mhc<-read.table("train_uniq_mhc_list.csv",header = F,sep = ",")
+uniq_train_mhc<-uniq_train_mhc$V1
+```
+
+# 3.Unseen TCR
+
+## Read data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","uniq_train_pep","uniq_train_mhc")))
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+```
+
+## Filter data
+
+```{r}
+result$tcr<-paste(result$vaseq,result$cdr3a,result$vbseq,result$cdr3b,sep='_')
+result_filtered<-result[(result$tcr %in% val_tcr_remain_list),]
+```
+
+## Print AUROC
+
+```{r}
+print(PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0])))
+```
+
+# 4.Unseen peptide
+
+## Read data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","uniq_train_pep","uniq_train_mhc")))
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+
+```
+
+## Filter data
+
+```{r}
+uniq_val_pep<-unique(result$peptide)
+pep_dist<-stringdist::stringdistmatrix(uniq_val_pep,uniq_train_pep)
+unseen_pep_list<-uniq_val_pep[apply(pep_dist,1,min)>0]
+result_filtered<-result[result$peptide %in% unseen_pep_list,]
+```
+
+## Print AUC of the validation set
+
+```{r}
+print(PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0])))
+```
+
+# 5.Unseen MHC
+
+## Read data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","unseen_pep_list","uniq_val_pep","pep_dist","uniq_train_pep","uniq_train_mhc")))
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+```
+
+## Filter data
+
+```{r}
+result_filtered<-result[(!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)),]
+```
+
+## Print AUC of the validation set
+
+```{r}
+print(PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0])))
+```
+
+# 6.Unseen peptide and MHC
+
+## Read data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","unseen_pep_list","uniq_val_pep","pep_dist","uniq_train_pep","uniq_train_mhc")))
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+```
+
+## Filter data
+
+```{r}
+result_filtered<-result[(result$peptide %in% uniq_val_pep[apply(pep_dist,1,min)>0]) & (!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)),]
+```
+
+## Print AUC of the validation set
+
+```{r}
+print(PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0])))
+```
+
+# 7.Unseen peptide, MHC and TCR
+
+## Read data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","unseen_pep_list","uniq_val_pep","pep_dist","uniq_train_pep","uniq_train_mhc")))
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+```
+
+## Filter data
+
+```{r}
+result$tcr<-paste(result$vaseq,result$cdr3a,result$vbseq,result$cdr3b,sep='_')
+result_filtered<-result[(result$peptide %in% uniq_val_pep[apply(pep_dist,1,min)>0]) & (!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)) & (result$tcr %in% val_tcr_remain_list),]
+```
+
+## Print AUROC
+
+```{r}
+print(PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0])))
+```
+
+# 8.Similarity vs accuracy
+
+## Prepare data
+
+```{r}
+rm(list=setdiff(ls(),c("val_tcr_remain_list","val_cdr3_similar_list","unseen_pep_list","uniq_val_pep","pep_dist","uniq_train_pep","uniq_train_mhc")))
+pep_dist_df<-data.frame(peptide=uniq_val_pep,mindis=apply(pep_dist, 1, min)) 
+
+result<-read.table("ensembl_NoRand_feb20_CPU.txt",header = T,sep=",")
+result$tcr<-paste(result$vaseq,result$cdr3a,result$vbseq,result$cdr3b,sep='_')
+result$cdr3ab<-paste(result$cdr3a,result$cdr3b,sep='_')
+result<-merge(result,pep_dist_df,by="peptide",all.x = T)
+```
+
+## Plot results
+
+```{r}
+plot(0, 0, type = "n", xlim = c(-0.1, 5), ylim = c(0.6, 1), 
+     cex.lab = 1.2,
+     cex.axis = 1.2,
+     xlab = "Min. peptide distance between validation and training", ylab = "AUROC")
+
+for (i in c(0,1,2,3,4,5)) {
+  result_filtered<-result[result$mindis>=i,]
+  auc<-PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0]))
+  points(jitter(i, amount = 0.1), auc$auc, col = "blue", pch = 19)
+}
+
+print(nrow(result))
+
+for (i in c(0,1,2,3,4,5)) {
+  result_filtered<-result[result$mindis>=i  & (!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)),]
+  auc<-PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0]))
+  points(jitter(i, amount = 0.1), auc$auc, col = "green", pch = 19)
+}
+
+print(nrow(result[(!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)),]))
+
+for (i in c(0,1,2,3,4,5)) {
+  result_filtered<-result[result$mindis>=i  & (!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)) & (result$tcr %in% val_tcr_remain_list),]
+  auc<-PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0]))
+  points(jitter(i, amount = 0.1), auc$auc, col = "yellow", pch = 19)
+}
+
+print(nrow(result[(!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)) & (result$tcr %in% val_tcr_remain_list),]))
+
+for (i in c(0,1,2,3,4,5)) {
+  result_filtered<-result[result$mindis>=i  & (!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)) & !(result$cdr3ab %in% val_cdr3_similar_list),]
+  auc<-PRROC::roc.curve((1-result_filtered$avg_rank[result_filtered$label==1]),(1-result_filtered$avg_rank[result_filtered$label==0]))
+  points(jitter(i, amount = 0.1), auc$auc, col = "orange", pch = 19)
+}
+
+print(nrow(result[(!(paste(result$mhca,result$mhcb,sep='_') %in% uniq_train_mhc)) & !(result$cdr3ab %in% val_cdr3_similar_list),]))
+
+legend("topright", 
+       legend = c("unseen TCR-pMHC (N=4872)","unseen MHC (N=264)","unseen MHC and unseen TCR (N=252)","unseen MHC and dissimilar TCR (N=175)"),      
+       col = c("blue","green","yellow","orange"),         
+       pch = 19,            
+       bty = "n")
+```
