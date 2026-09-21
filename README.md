@@ -74,7 +74,7 @@ Prepare your dataset so that it looks somewhat like the following:
 We have also built a detailed [online documentation](https://pmtnet-omni-document.readthedocs.io/en/latest/) where we walk you through every single step for data preparation. It also includes a step-by-step instruction on input format. 
 
 ### Quick Start Guide 
-1. Use [this link](https://365utsouthwestern-my.sharepoint.com/:u:/r/personal/yuqiu_yang_utsouthwestern_edu/Documents/pMTnet_Omni_datafile/data.tgz?csf=1&web=1&e=YdNTsn) to download the supporting data to your local directory, say <i>./data</i>. 
+1. Use [this link](https://www.dropbox.com/scl/fi/m0x0rnw1ue4ew1q1ehtrx/data.tgz?rlkey=5if3sehmzo1t60ep6hma1bx4w&st=pokx7vnv&dl=0) to download the supporting data to your local directory, say <i>./data</i>. 
 
 <b>Caution: </b> the data file is around 30Gb. Make sure you have enough space on your hard drive. 
 
